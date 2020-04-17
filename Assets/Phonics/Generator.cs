@@ -6,7 +6,7 @@ namespace PxPre
 { 
     namespace Phonics
     { 
-        public static class Generator
+        public static class WesternFreqUtils
         {
             public const float pi = 3.14159265359f;
             public const float tau = pi * 2.0f;
@@ -27,13 +27,15 @@ namespace PxPre
                 System.Array.Clear(rf, start, len);
             }
 
-            public static float SetSine(float [] rf, int start, int len, float phase, float time, float freq, float amp, int sampsSec)
+            public static float SetSine(float [] rf, int start, int len, float time, float freq, float amp, int sampsSec)
             { 
-                float sincr = 1.0f / sampsSec * freq * tau;
-                float s = time + phase;
+                // Multiply tau for 1 hertz.
+                // Multiply by frequency because that's requested as a paramter
+                float sincr = 1.0f / sampsSec;
+                float s = time;
                 for(int i = start; i < start + len; ++i)
                 { 
-                    rf[i] = Mathf.Sin(s) * amp;
+                    rf[i] = Mathf.Sin(s * freq * tau) * amp;
                     s += sincr;
                 }
                 return time + (float)len / (float)sampsSec;
