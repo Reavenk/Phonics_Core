@@ -16,8 +16,8 @@ namespace PxPre
                 A,  As,
                 B,
                 C,  Cs,
-                D,
-                E,  Es,
+                D,  Ds,
+                E,
                 F,  Fs,
                 G,  Gs
             }
@@ -199,12 +199,12 @@ namespace PxPre
                         break;
 
                     case 6:
-                        n = Note.E;
+                        n = Note.Ds;
                         octave = o;
                         break;
 
                     case 7:
-                        n = Note.Es;
+                        n = Note.E;
                         octave = o;
                         break;
 
@@ -259,10 +259,10 @@ namespace PxPre
                     case Note.D:
                         return octbase + 5;
 
-                    case Note.E:
+                    case Note.Ds:
                         return octbase + 6;
 
-                    case Note.Es:
+                    case Note.E:
                         return octbase + 7;
 
                     case Note.F:
