@@ -6,3 +6,4 @@ obj
 Temp
 *.csproj
 *.sln
+*.md.meta

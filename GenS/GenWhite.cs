@@ -2,19 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GenWhite : GenBase
+namespace PxPre
 {
-    public GenWhite(float freq, double startTime, int samplesPerSec, float amplitude)
-        : base(freq, startTime, samplesPerSec, amplitude)
-    { }
-
-    public override void AccumulateImpl(float[] data, int size)
+    namespace Phonics
     {
-        double tIt = this.CurTime;
-        double incr = this.TimePerSample;
-        for (int i = 0; i < size; ++i)
+        public class GenWhite : GenBase
         {
-            data[i] += Random.value;
+            public GenWhite(float freq, double startTime, int samplesPerSec, float amplitude)
+                : base(freq, startTime, samplesPerSec, amplitude)
+            { }
+
+            public override void AccumulateImpl(float[] data, int size)
+            {
+                double tIt = this.CurTime;
+                double incr = this.TimePerSample;
+                for (int i = 0; i < size; ++i)
+                {
+                    data[i] += Random.value;
+                }
+            }
+
+            public override PlayState Finished()
+            {
+                return PlayState.Constant;
+            }
         }
     }
 }

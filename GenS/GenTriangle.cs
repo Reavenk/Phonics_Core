@@ -2,25 +2,36 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GenTriangle : GenBase
+namespace PxPre
 {
-    public GenTriangle(float freq, double startTime, int samplesPerSec, float amplitude)
-        : base(freq, startTime, samplesPerSec, amplitude)
-    { }
-
-    public override void AccumulateImpl(float[] data, int size)
+    namespace Phonics
     {
-        double tIt = this.CurTime;
-        double incr = this.TimePerSample;
-        for (int i = 0; i < size; ++i)
+        public class GenTriangle : GenBase
         {
-            float fVal = (float)((tIt * this.Freq) % 1.0) * 2.0f;
+            public GenTriangle(float freq, double startTime, int samplesPerSec, float amplitude)
+                : base(freq, startTime, samplesPerSec, amplitude)
+            { }
 
-            if(fVal > 1.0f)
-                fVal = 1.0f - (fVal - 1.0f);
+            public override void AccumulateImpl(float[] data, int size)
+            {
+                double tIt = this.CurTime;
+                double incr = this.TimePerSample;
+                for (int i = 0; i < size; ++i)
+                {
+                    float fVal = (float)((tIt * this.Freq) % 1.0) * 2.0f;
 
-            data[i] += (fVal - 0.5f) * 2.0f * this.amplitude;
-            tIt += incr;
+                    if(fVal > 1.0f)
+                        fVal = 1.0f - (fVal - 1.0f);
+
+                    data[i] += (fVal - 0.5f) * 2.0f * this.amplitude;
+                    tIt += incr;
+                }
+            }
+
+            public override PlayState Finished()
+            { 
+                return PlayState.Constant;
+            }
         }
     }
 }
