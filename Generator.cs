@@ -11,7 +11,7 @@ namespace PxPre
             public const float pi = 3.14159265359f;
             public const float tau = pi * 2.0f;
 
-            public enum Note
+            public enum Key
             {
                 A,  As,
                 B,
@@ -161,7 +161,7 @@ namespace PxPre
                 return time + (float)len / (float)sampsSec;
             }
 
-            public static void GetSetWestKeyInfo(int key, out Note n, out int octave)
+            public static void GetSetWestKeyInfo(int key, out Key n, out int octave)
             { 
                 int o = key / 12;
                 int st = key % 12;
@@ -169,112 +169,112 @@ namespace PxPre
                 switch(st)
                 { 
                     case 0:
-                        n = Note.A;
+                        n = Key.A;
                         octave = o - 1;
                         break;
 
                     case 1:
-                        n = Note.As;
+                        n = Key.As;
                         octave = o - 1;
                         break;
 
                     case 2:
-                        n = Note.B;
+                        n = Key.B;
                         octave = o - 1;
                         break;
 
                     case 3:
-                        n = Note.C;
+                        n = Key.C;
                         octave = o;
                         break;
 
                     case 4:
-                        n = Note.Cs;
+                        n = Key.Cs;
                         octave = o;
                         break;
 
                     case 5:
-                        n = Note.D;
+                        n = Key.D;
                         octave = o;
                         break;
 
                     case 6:
-                        n = Note.Ds;
+                        n = Key.Ds;
                         octave = o;
                         break;
 
                     case 7:
-                        n = Note.E;
+                        n = Key.E;
                         octave = o;
                         break;
 
                     case 8:
-                        n = Note.F;
+                        n = Key.F;
                         octave = o;
                         break;
 
                     case 9:
-                        n = Note.Fs;
+                        n = Key.Fs;
                         octave = o;
                         break;
 
                     case 10:
-                        n = Note.G;
+                        n = Key.G;
                         octave = o;
                         break;
 
                     case 11:
-                        n = Note.Gs;
+                        n = Key.Gs;
                         octave = o;
                         break;
 
                     default:
-                        n = Note.A;
+                        n = Key.A;
                         octave = -1;
                         break;
                 }
             }
 
-            public static int GetStdWestKey(Note n, int octave)
+            public static int GetStdWestNote(Key k, int octave)
             {
                 int octbase = octave * 12;
 
-                switch (n)
+                switch (k)
                 {
-                    case Note.A:
+                    case Key.A:
                         return octbase + 12;
 
-                    case Note.As:
+                    case Key.As:
                         return octbase + 13;
 
-                    case Note.B:
+                    case Key.B:
                         return octbase + 14;
 
-                    case Note.C:
+                    case Key.C:
                         return octbase + 3;
 
-                    case Note.Cs:
+                    case Key.Cs:
                         return octbase + 4;
 
-                    case Note.D:
+                    case Key.D:
                         return octbase + 5;
 
-                    case Note.Ds:
+                    case Key.Ds:
                         return octbase + 6;
 
-                    case Note.E:
+                    case Key.E:
                         return octbase + 7;
 
-                    case Note.F:
+                    case Key.F:
                         return octbase + 8;
 
-                    case Note.Fs:
+                    case Key.Fs:
                         return octbase + 9;
 
-                    case Note.G:
+                    case Key.G:
                         return octbase + 10;
 
-                    case Note.Gs:
+                    case Key.Gs:
                         return octbase + 11;
 
                     default:
@@ -282,23 +282,24 @@ namespace PxPre
                 }
             }
 
-            public static float GetStdWestFrequency(Note n, int octave)
+            public static float GetStdWestFrequency(Key k, int octave)
             { 
-                int baseline = GetStdWestKey(Note.A, 4);
-                int key = GetStdWestKey(n, octave);
+                int baseline = GetStdWestNote(Key.A, 4);
+                Debug.Log(baseline);
+                int key = GetStdWestNote(k, octave);
                 int diff = key - baseline;
 
                 float A4Fr = 440.0f;
                 return A4Fr * Mathf.Pow(2.0f, (float)diff/12.0f);
             }
 
-            public static float GetStdWestFrequency(int key)
+            public static float GetStdWestFrequency(int note)
             {
-                Note n;
+                Key k;
                 int o;
-                GetSetWestKeyInfo(key, out n, out o);
+                GetSetWestKeyInfo(note, out k, out o);
 
-                return GetStdWestFrequency(n, o);
+                return GetStdWestFrequency(k, o);
             }
         }
     }
