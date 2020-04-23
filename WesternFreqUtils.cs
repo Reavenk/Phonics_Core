@@ -143,7 +143,6 @@ namespace PxPre
             public static float GetFrequency(Key k, int octave)
             {
                 int baseline = GetNote(Key.A, 4);
-                Debug.Log(baseline);
                 int key = GetNote(k, octave);
                 int diff = key - baseline;
 

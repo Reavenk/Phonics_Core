@@ -20,19 +20,20 @@ namespace PxPre
 
             }
 
-            public override void AccumulateImpl(float[] data, int size)
+            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
                 if(this.passed == true)
                 { 
-                    this.gen.Accumulate(data, size);
+                    this.gen.Accumulate(data, size, pcmFactory);
                 }
                 else
                 {
                     double inTime = this.CurTime / this.attacktime;
                     double incr = 1.0 / (this.SamplesPerSec * this.attacktime);
 
-                    float [] a = GetBufferA(size);
-                    this.gen.Accumulate(a, size);
+                    FPCM fa = pcmFactory.GetFPCM(size, true);
+                    float [] a = fa.buffer;
+                    this.gen.Accumulate(a, size, pcmFactory);
 
                     // NOTE: This could be optimized if we figure out
                     // the sample where the attack ends and avoid

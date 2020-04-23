@@ -8,11 +8,12 @@ namespace PxPre
     {
         public class GenWhite : GenBase
         {
-            public GenWhite(float freq, double startTime, int samplesPerSec, float amplitude)
-                : base(freq, startTime, samplesPerSec, amplitude)
+            // We throw away the frequency parameter, it does nothing for us.
+            public GenWhite(double startTime, int samplesPerSec, float amplitude)
+                : base(0.0f, startTime, samplesPerSec, amplitude)
             { }
 
-            public override void AccumulateImpl(float[] data, int size)
+            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
                 double tIt = this.CurTime;
                 double incr = this.TimePerSample;

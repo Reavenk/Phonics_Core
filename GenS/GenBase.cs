@@ -58,49 +58,6 @@ namespace PxPre
 
             public float amplitude = 0.8f;
 
-            // Some reusable float buffer for everything to use.
-            protected static float [] bufferA = null;
-            protected static float [] bufferB = null;
-            protected static float [] bufferC = null;
-            protected static float [] bufferD = null;
-
-            private static void AllocateBuffer(ref float [] buffer, int size)
-            { 
-                if(buffer == null || buffer.Length < size)
-                    buffer = new float[size];
-            }
-
-            private static void ZeroedBuffer(ref float [] buffer, int size)
-            { 
-                AllocateBuffer(ref buffer, size);
-                for(int i = 0; i < size; ++i)
-                    buffer[i] = 0.0f;
-            }
-
-            public static float [] GetBufferA(int minsize)
-            { 
-                ZeroedBuffer(ref bufferA, minsize);
-                return bufferA;
-            }
-
-            public static float [] GetBufferB(int minsize)
-            {
-                ZeroedBuffer(ref bufferB, minsize);
-                return bufferB;
-            }
-
-            public static float [] GetBufferC(int minsize)
-            {
-                ZeroedBuffer(ref bufferC, minsize);
-                return bufferC;
-            }
-
-            public static float [] GetBufferD(int minsize)
-            {
-                ZeroedBuffer(ref bufferD, minsize);
-                return bufferD;
-            }
-
             protected GenBase(float freq, double startTime, int samplesPerSec, float amplitude)
             { 
                 this.samplesPerSec = samplesPerSec;
@@ -113,22 +70,22 @@ namespace PxPre
                 this.timePerSample = 1.0 / samplesPerSec;
             }
 
-            public abstract void AccumulateImpl(float [] data, int size);
+            public abstract void AccumulateImpl(float [] data, int size, IFPCMFactory pcmFactory);
 
-            public void Accumulate(float [] data, int size)
+            public void Accumulate(float [] data, int size, IFPCMFactory pcmFactory)
             {
-                this.AccumulateImpl(data, size);
+                this.AccumulateImpl(data, size, pcmFactory);
 
                 this.curTime += size * timePerSample;
                 this.it += size;
             }
 
-            public void Set(float [] data, int size)
+            public void Set(float [] data, int size, IFPCMFactory pcmFactory)
             {
                 for(int i = 0; i < data.Length; ++i)
                     data[i] = 0.0f;
 
-                this.AccumulateImpl(data, size);
+                this.AccumulateImpl(data, size, pcmFactory);
 
                 this.curTime += data.Length * timePerSample;
                 this.it += data.Length;
@@ -136,7 +93,8 @@ namespace PxPre
 
             public void ReaderCallback(float[] data)
             {
-                this.Set(data, data.Length);
+                IFPCMFactory pcmFactory = FPCMFactory.Instance;
+                this.Set(data, data.Length, pcmFactory);
             }
 
             public void SetPositionCallback(int position)

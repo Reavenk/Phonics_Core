@@ -6,14 +6,14 @@ namespace PxPre
 {
     namespace Phonics
     {
-        public class GenMod : GenBase
+        public class GenSub : GenBase
         {
             GenBase gma;
             GenBase gmb;
 
-            public GenMod(double startTime, int samplesPerSec, GenBase gma, GenBase gmb)
+            public GenSub(double startTime, int samplesPerSec, GenBase gma, GenBase gmb)
                 : base(0.0f, startTime, samplesPerSec, 1.0f)
-            { 
+            {
                 this.gma = gma;
                 this.gmb = gmb;
             }
@@ -29,8 +29,8 @@ namespace PxPre
                 gma.Accumulate(a, size, pcmFactory);
                 gmb.Accumulate(b, size, pcmFactory);
 
-                for(int i = 0; i < size; ++i)
-                    data[i] = a[i] * b[i] * this.amplitude;
+                for (int i = 0; i < size; ++i)
+                    data[i] = a[i] + b[i] * this.amplitude;
             }
 
             public override PlayState Finished()
@@ -40,18 +40,18 @@ namespace PxPre
 
                 // If we're modulating and one is signaling it's just going to
                 // only return 0.0 from now one, we're done.
-                if(psA == PlayState.Finished || psB == PlayState.Finished)
+                if (psA == PlayState.Finished || psB == PlayState.Finished)
                     return PlayState.Finished;
 
-                if(psA == PlayState.NotStarted && psB == PlayState.NotStarted)
+                if (psA == PlayState.NotStarted && psB == PlayState.NotStarted)
                     return PlayState.NotStarted;
 
-                if(psA == PlayState.Constant || psB == PlayState.Constant)
+                if (psA == PlayState.Constant || psB == PlayState.Constant)
                     return PlayState.Constant;
 
                 return PlayState.Playing;
 
             }
         }
-    } 
+    }
 }
