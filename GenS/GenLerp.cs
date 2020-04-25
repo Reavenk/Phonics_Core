@@ -3,34 +3,39 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace PxPre
-{ 
+{
     namespace Phonics
-    { 
-        public class GenAdd : GenBase
-        {
+    {
+        public class GenLerp : GenBase
+        { 
             GenBase gma;
             GenBase gmb;
+            GenBase gmFactor;
 
-            public GenAdd(double startTime, int samplesPerSec, GenBase gma, GenBase gmb)
-                : base(0.0f, startTime, samplesPerSec, 1.0f)
-            {
+            public GenLerp(double startTime, int samplesPerSc, GenBase gma, GenBase gmb, GenBase gmFactor)
+                : base(0.0f, startTime, samplesPerSc, 1.0f)
+            { 
                 this.gma = gma;
                 this.gmb = gmb;
+                this.gmFactor = gmFactor;
             }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
                 FPCM fa = pcmFactory.GetFPCM(size, true);
                 FPCM fb = pcmFactory.GetFPCM(size, true);
-                
+                FPCM ff = pcmFactory.GetFPCM(size, true);
+
                 float [] a = fa.buffer;
                 float [] b = fb.buffer;
+                float [] f = ff.buffer;
 
                 this.gma.Accumulate(a, size, pcmFactory);
                 this.gmb.Accumulate(b, size, pcmFactory);
+                this.gmFactor.Accumulate(f, size, pcmFactory);
 
-                for (int i = 0; i < size; ++i)
-                    data[i] = a[i] + b[i] * this.amplitude;
+                for(int i = 0; i < size; ++i)
+                    data[i] += a[i] + (b[i] - a[i]) * f[i];
             }
 
             public override PlayState Finished()
@@ -50,7 +55,6 @@ namespace PxPre
                     return PlayState.Constant;
 
                 return PlayState.Playing;
-
             }
         }
     }
