@@ -21,73 +21,61 @@ namespace PxPre
 
             public static void GetKeyInfo(int key, out Key n, out int octave)
             {
-                int o = key / 12;
+                octave = key / 12;
                 int st = key % 12;
 
                 switch (st)
                 {
                     case 0:
-                        n = Key.A;
-                        octave = o - 1;
+                        n = Key.C;
                         break;
 
                     case 1:
-                        n = Key.As;
-                        octave = o - 1;
+                        n = Key.Cs;
                         break;
 
                     case 2:
-                        n = Key.B;
-                        octave = o - 1;
+                        n = Key.D;
                         break;
 
                     case 3:
-                        n = Key.C;
-                        octave = o;
+                        n = Key.Ds;
                         break;
 
                     case 4:
-                        n = Key.Cs;
-                        octave = o;
+                        n = Key.E;
                         break;
 
                     case 5:
-                        n = Key.D;
-                        octave = o;
+                        n = Key.F;
                         break;
 
                     case 6:
-                        n = Key.Ds;
-                        octave = o;
+                        n = Key.Fs;
                         break;
 
                     case 7:
-                        n = Key.E;
-                        octave = o;
+                        n = Key.G;
                         break;
 
                     case 8:
-                        n = Key.F;
-                        octave = o;
+                        n = Key.Gs;
                         break;
 
                     case 9:
-                        n = Key.Fs;
-                        octave = o;
+                        n = Key.A;
                         break;
 
                     case 10:
-                        n = Key.G;
-                        octave = o;
+                        n = Key.As;
                         break;
 
                     case 11:
-                        n = Key.Gs;
-                        octave = o;
+                        n = Key.B;
                         break;
 
                     default:
-                        n = Key.A;
+                        n = Key.C;
                         octave = -1;
                         break;
                 }
@@ -99,40 +87,40 @@ namespace PxPre
 
                 switch (k)
                 {
-                    case Key.A:
-                        return octbase + 12;
-
-                    case Key.As:
-                        return octbase + 13;
-
-                    case Key.B:
-                        return octbase + 14;
-
                     case Key.C:
-                        return octbase + 3;
+                        return octbase + 0;
 
                     case Key.Cs:
-                        return octbase + 4;
+                        return octbase + 1;
 
                     case Key.D:
-                        return octbase + 5;
+                        return octbase + 2;
 
                     case Key.Ds:
-                        return octbase + 6;
+                        return octbase + 3;
 
                     case Key.E:
-                        return octbase + 7;
+                        return octbase + 4;
 
                     case Key.F:
-                        return octbase + 8;
+                        return octbase + 5;
 
                     case Key.Fs:
-                        return octbase + 9;
+                        return octbase + 6;
 
                     case Key.G:
-                        return octbase + 10;
+                        return octbase + 7;
 
                     case Key.Gs:
+                        return octbase + 8;
+
+                    case Key.A:
+                        return octbase + 9;
+
+                    case Key.As:
+                        return octbase + 10;
+
+                    case Key.B:
                         return octbase + 11;
 
                     default:

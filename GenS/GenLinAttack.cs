@@ -60,7 +60,15 @@ namespace PxPre
 
             public override PlayState Finished()
             {
-                return PlayState.Playing;
+                if(this.gen == null)
+                    return PlayState.Finished;
+
+                return this.gen.Finished();
+            }
+
+            public override void ReportChildren(List<GenBase> lst)
+            {
+                lst.Add(this.gen);
             }
         }
     }

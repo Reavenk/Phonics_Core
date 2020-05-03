@@ -6,34 +6,33 @@ namespace PxPre
 {
     namespace Phonics
     {
-        public class GenQuant : GenBase
-        { 
-            float factor;
-            float invFactor;
-
+        public class GenMAD : GenBase
+        {
             GenBase input;
+            float mul;
+            float add;
 
-            public GenQuant(int samplesPerSec, GenBase input, float factor)
-                : base(0.0f, 0.0, samplesPerSec, 1.0f)
+            public GenMAD(GenBase input, float mul, float add)
+                : base(0.0f, 0.0, 0, 1.0f)
             { 
-                this.factor = factor;
-                this.invFactor = 1.0f / factor;
                 this.input = input;
+                this.mul = mul;
+                this.add = add;
             }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
                 FPCM fa = pcmFactory.GetFPCM(size, true);
-                float [] a = fa.buffer;
+                float[] a = fa.buffer;
                 this.input.Accumulate(a, size, pcmFactory);
 
-                for(int i = 0; i < size; ++i)
-                    data[i] += ((float)(int)(a[i] * factor))*invFactor;
+                for (int i = 0; i < size; ++i)
+                    data[i] += a[i] * this.mul + this.add;
             }
 
             public override PlayState Finished()
             {
-                if(this.input == null)
+                if(input == null)
                     return PlayState.Finished;
 
                 return this.input.Finished();
@@ -44,5 +43,6 @@ namespace PxPre
                 lst.Add(this.input);
             }
         }
+
     }
 }

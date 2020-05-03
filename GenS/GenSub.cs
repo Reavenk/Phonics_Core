@@ -52,6 +52,12 @@ namespace PxPre
                 return PlayState.Playing;
 
             }
+
+            public override void ReportChildren(List<GenBase> lst)
+            {
+                lst.Add(this.gma);
+                lst.Add(this.gmb);
+            }
         }
     }
 }

@@ -8,12 +8,12 @@ namespace PxPre
     {
         public class GenSign : GenBase
         {
-            GenBase inpput;
+            GenBase input;
 
             public GenSign(int samplesPerSec, GenBase input)
                 : base(0.0f, 0.0, samplesPerSec, 1.0f)
             { 
-                this.inpput = input;
+                this.input = input;
             }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
@@ -22,7 +22,7 @@ namespace PxPre
 
                 float [] a = fa.buffer;
 
-                this.inpput.Accumulate(a, size, pcmFactory);
+                this.input.Accumulate(a, size, pcmFactory);
 
                 for(int i = 0; i < size; ++i)
                 { 
@@ -38,10 +38,15 @@ namespace PxPre
 
             public override PlayState Finished()
             {
-                if(this.inpput == null)
+                if(this.input == null)
                     return PlayState.Finished;
 
-                return this.inpput.Finished();
+                return this.input.Finished();
+            }
+
+            public override void ReportChildren(List<GenBase> lst)
+            {
+                lst.Add(this.input);
             }
         }
     }

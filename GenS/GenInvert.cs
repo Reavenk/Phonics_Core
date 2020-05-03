@@ -33,6 +33,11 @@ namespace PxPre
 
                 return this.input.Finished();
             }
+
+            public override void ReportChildren(List<GenBase> lst)
+            {
+                lst.Add(this.input);
+            }
         }
     }
 }

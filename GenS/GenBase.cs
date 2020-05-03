@@ -101,6 +101,80 @@ namespace PxPre
             { /* Do nothing */ }
 
             public abstract PlayState Finished();
+
+            public static PlayState ResolveTwoFinished(GenBase a, GenBase b)
+            {
+                if(a == null && b == null)
+                    return PlayState.Finished;
+
+                if(a == null)
+                    return b.Finished();
+
+                if(b == null)
+                    return a.Finished();
+
+                PlayState psA = a.Finished();
+                PlayState psB = b.Finished();
+
+                if (psA == PlayState.Playing || psB == PlayState.Playing)
+                    return PlayState.Playing;
+
+                // If we're modulating and one is signaling it's just going to
+                // only return 0.0 from now one, we're done.
+                if (psA == PlayState.Finished || psB == PlayState.Finished)
+                    return PlayState.Finished;
+
+                if (psA == PlayState.NotStarted && psB == PlayState.NotStarted)
+                    return PlayState.NotStarted;
+
+                if (psA == PlayState.Constant || psB == PlayState.Constant)
+                    return PlayState.Constant;
+
+                return PlayState.Playing;
+            }
+
+            public void DeconstructHierarchy()
+            {
+                List<GenBase> hierarchy = this.ReportChildrenHierarchy();
+                foreach (GenBase gb in hierarchy)
+                    gb.Deconstruct();
+            }
+
+            public void ReleaseHierarchy()
+            {
+                List<GenBase> heirarchy = this.ReportChildrenHierarchy();
+                foreach(GenBase gb in heirarchy)
+                    gb.Release();
+            }
+
+            public List<GenBase> ReportChildrenHierarchy()
+            { 
+                List<GenBase> ret = new List<GenBase>();
+                ret.Add(this);
+                int idx = 0;
+                while(idx < ret.Count)
+                { 
+                    ret[idx].ReportChildren(ret);
+                    ++idx;
+                }
+                return ret;
+            }
+
+            /// <summary>
+            /// Add all your children to the list so we can send a signal to the entire heirarchy.
+            /// </summary>
+            /// <param name="gb"></param>
+            public abstract void ReportChildren(List<GenBase> lst);
+
+            // Dissassembly anything before the object gets thrown away. While garbage collection 
+            // will handle most things, we need this function to signal global allocations from the
+            // FPCM factory to be released back.
+            public virtual void Deconstruct() 
+            { }
+
+            // Called when the key is released.
+            public virtual void Release() 
+            { }
         }
     }
 }

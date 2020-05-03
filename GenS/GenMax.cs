@@ -3,34 +3,34 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace PxPre
-{ 
+{
     namespace Phonics
-    { 
-        public class GenAdd : GenBase
+    {
+        public class GenMax : GenBase
         {
             GenBase gma;
             GenBase gmb;
 
-            public GenAdd(double startTime, int samplesPerSec, GenBase gma, GenBase gmb)
+            public GenMax(double startTime, int samplesPerSec, GenBase gma, GenBase gmb)
                 : base(0.0f, startTime, samplesPerSec, 1.0f)
-            {
+            { 
                 this.gma = gma;
                 this.gmb = gmb;
             }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
-                FPCM fa = pcmFactory.GetFPCM(size, true);
-                FPCM fb = pcmFactory.GetFPCM(size, true);
-                
-                float [] a = fa.buffer;
-                float [] b = fb.buffer;
+                FPCM fa = pcmFactory.GetFPCM(data.Length, true);
+                FPCM fb = pcmFactory.GetFPCM(data.Length, true);
 
-                this.gma.Accumulate(a, size, pcmFactory);
-                this.gmb.Accumulate(b, size, pcmFactory);
+                float[] a = fa.buffer;
+                float[] b = fb.buffer;
+
+                gma.Accumulate(a, size, pcmFactory);
+                gmb.Accumulate(b, size, pcmFactory);
 
                 for (int i = 0; i < size; ++i)
-                    data[i] = a[i] + b[i] * this.amplitude;
+                    data[i] += (a[i] > b[i]) ? a[i] : b[i];
             }
 
             public override PlayState Finished()

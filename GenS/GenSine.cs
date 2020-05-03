@@ -27,6 +27,9 @@ namespace PxPre
             {
                 return PlayState.Constant;
             }
+
+            public override void ReportChildren(List<GenBase> lst)
+            {}
         }
     }
 }
