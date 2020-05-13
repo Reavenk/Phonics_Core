@@ -1,14 +1,12 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
 
 namespace PxPre
 {
     namespace Phonics
     {
-        public class GenSawtooth : GenBase
+        public class GenSawtoothWave : GenBase
         {
-            public GenSawtooth(float freq, double startTime, int samplesPerSec, float amplitude)
+            public GenSawtoothWave(float freq, double startTime, int samplesPerSec, float amplitude)
                 : base(freq, startTime, samplesPerSec, amplitude)
             { }
 

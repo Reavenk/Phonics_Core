@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 namespace PxPre
@@ -58,7 +57,11 @@ namespace PxPre
                         samples,
                         1, 
                         samplesPerSec,
+#if UNITY_WEBGL && !UNITY_EDITOR
+                        false,
+#else
                         true,
+#endif
                         pn.generator.ReaderCallback);
                 pn.source = source;
                 pn.source.loop = true;
@@ -102,17 +105,25 @@ namespace PxPre
                 return true;
             }
 
-            public void StopAllNotes()
+            public bool StopAllNotes()
             {
+                bool stoppedAny = false;
                 foreach (KeyValuePair<int, PlayingNote> kvp in this.activeNotes)
+                {
                     this.StopPlayingNote(kvp.Value);
+                    stoppedAny = true;
+                }
 
                 this.activeNotes.Clear();
 
                 foreach (PlayingNote pn in this.releasingNotes)
+                {
                     this.StopPlayingNote(pn);
+                    stoppedAny = true;
+                }
                 
                 this.releasingNotes.Clear();
+                return stoppedAny;
             }
 
             private void StopPlayingNote(PlayingNote pn)

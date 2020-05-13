@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using System.Collections.Generic;
 
 namespace PxPre
 {
@@ -8,29 +6,37 @@ namespace PxPre
     {
         public class GenSquare : GenBase
         {
-            public GenSquare(float freq, double startTime, int samplesPerSec, float amplitude)
-                : base(freq, startTime, samplesPerSec, amplitude)
-            { }
+            GenBase input;
+
+            public GenSquare(GenBase input)
+                : base(0.0f, 0.0, 0, 1.0f)
+            { 
+                this.input = input;
+            }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
             {
-                double tIt = this.CurTime;
-                double incr = this.TimePerSample;
+                FPCM fa = pcmFactory.GetFPCM(size, true);
+                float[] a = fa.buffer;
+                this.input.Accumulate(a, size, pcmFactory);
+
                 for (int i = 0; i < size; ++i)
-                {
-                    float fVal = (float)((tIt * this.Freq) % 1.0);
-                    data[i] += (fVal < 0.5f) ? -this.amplitude : this.amplitude;
-                    tIt += incr;
-                }
+                    data[i] += a[i] * a[i];
             }
 
             public override PlayState Finished()
             {
-                return PlayState.Constant;
+                if(this.input == null)
+                    return PlayState.Finished;
+
+                return this.input.Finished();
             }
 
             public override void ReportChildren(List<GenBase> lst)
-            {}
+            { 
+                if(this.input != null)
+                    lst.Add(this.input);
+            }
         }
     }
 }
