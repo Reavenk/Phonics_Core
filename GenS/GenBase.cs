@@ -1,4 +1,26 @@
-﻿using System.Collections.Generic;
+﻿// MIT License
+//
+// Copyright(c) 2020 Pixel Precision LLC
+// 
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+// 
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+// 
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+using System.Collections.Generic;
 
 namespace PxPre
 {
@@ -28,40 +50,39 @@ namespace PxPre
             Constant
         }
 
+        /// <summary>
+        /// The base class for all PCM streams. They're prefixed with the 
+        /// word "gen" because they generate PCM data.
+        /// </summary>
         public abstract class GenBase
         {
-            const float fTau = 6.28318530718f;
-            const double dTau = 6.28318530718;
+            // The value of pi.
+            public const float fPie = 3.14159265359f;
+            public const double dPie = 3.14159265359;
             //
-            const float fPie = 3.14159265359f;
-            const double dPie = 3.14159265359;
+            // The value of 2 * pi
+            public  const float fTau = 6.28318530718f;
+            public  const double dTau = 6.28318530718;
 
             public long it = 0;
-            public long It { get{return this.it; } }
-    
-            private float freq;
-            public float Freq { get{return this.freq; } }
-    
-            private double timeToFreq;
-            public double TimeToFreq {get{return this.timeToFreq; } }
-    
-            private int samplesPerSec;
-            public int SamplesPerSec {get{return this.samplesPerSec; } }
-    
+            public long It { get { return this.it; } }
+
+            /// <summary>
+            /// The amount of time, in seconds, that the PCM stream has been 
+            /// generating sample for.
+            /// </summary>
             private double curTime;
-            public double CurTime {get{return this.curTime; } }
-    
-            public double TimePerSample {get{return this.timePerSample; } }
+            public double CurTime { get { return this.curTime; } }
+
+            public double TimePerSample { get { return this.timePerSample; } }
             private double timePerSample;
 
-            public float amplitude = 0.8f;
+            private int samplesPerSec;
+            public int SamplesPerSec {get{return this.samplesPerSec; } }
 
-            protected GenBase(float freq, double startTime, int samplesPerSec, float amplitude)
+            protected GenBase(double startTime, int samplesPerSec)
             { 
                 this.samplesPerSec = samplesPerSec;
-                this.freq = freq;
-                this.timeToFreq = dTau * freq;
-                this.amplitude = amplitude;
 
                 this.curTime = startTime;
                 this.it = (long)(samplesPerSec * startTime);

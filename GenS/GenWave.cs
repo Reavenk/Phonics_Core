@@ -20,48 +20,40 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Collections.Generic;
 namespace PxPre
-{
+{ 
     namespace Phonics
-    {
+    { 
         /// <summary>
-        /// A wrapper on top of another IFPCMFactor (most likely a FPCMFactory) that
-        /// implements keeping track of scope.
+        /// The base class for wave generators.
         /// </summary>
-        public class FPCMScopedFactory : IFPCMFactory
+        public abstract class GenWave : GenBase
         {
-            public readonly IFPCMFactory parent;
+            /// <summary>
+            /// The frequency of the wave.
+            /// </summary>
+            private float freq;
+            public float Freq { get { return this.freq; } }
 
-            public List<FPCM> allocated = 
-                new List<FPCM>();
+            /// <summary>
+            /// The volume to generate the wave at.
+            /// </summary>
+            public float amplitude = 1.0f;
 
-            public FPCMScopedFactory(IFPCMFactory parent)
-            { 
-                this.parent = parent;
-            }
+            /// <summary>
+            /// Constructor
+            /// </summary>
+            /// <param name="freq">The frequency of the wave.</param>
+            /// <param name="samplesPerSec">The hertz of the audio sample being generated</param>
+            /// <param name="amplitude">The volume of the wave.</param>
+            protected GenWave(float freq, int samplesPerSec, float amplitude)
+                : base(0.0, samplesPerSec)
+            {
+                this.freq = freq;
+                
+                this.amplitude = amplitude;
 
-            public void ReleaseScope()
-            { 
-                foreach(FPCM fpcm in this.allocated)
-                    fpcm.Release();
-
-                this.allocated.Clear();
-            }
-
-            FPCM IFPCMFactory.GetFPCM(int samples, bool zero)
-            { 
-                FPCM ret = this.parent.GetFPCM(samples, zero);
-                if(ret == null)
-                    return null;
-
-                this.allocated.Add(ret);
-                return ret;
-            }
-
-            FPCM IFPCMFactory.GetGlobalFPCM(int samples, bool zero)
-            { 
-                return this.parent.GetGlobalFPCM(samples, zero);
+                
             }
         }
     }
