@@ -72,40 +72,47 @@ namespace PxPre
                 { 
                     this.releaseTotal = (int)(releaseTime * samplesPerSec);
                     this.releaseLeft = this.releaseTotal;
-                    this.saftey = (int)(samplesPerSec * 0.5f);
+                    this.saftey = samplesPerSec;
                 }
             }
 
             public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
-            { 
+            {
                 // Early release
-                if(this.released == true)
-                { 
-                    if(this.releaseLeft > 0 )
+                if (this.released == true)
+                {
+                    if (this.releaseLeft > 0)
                     {
                         FPCM fpcmRl = pcmFactory.GetFPCM(size, true);
                         float[] fprl = fpcmRl.buffer;
-                        this.input.Accumulate(fprl, size, pcmFactory);
+
+                        // We could probably optimize this by only calling AccumulateImpl_NonReleasePart()
+                        // when we're not in sustain yet.
+                        this.AccumulateImpl_NonReleasePart(fprl, size, pcmFactory);
 
                         float total = this.releaseTotal;
                         float left = this.releaseLeft;
                         int sampsCt = Mathf.Min(this.releaseLeft, size);
 
-                        for(int ei = 0 ; ei < sampsCt; ++ei)
+                        for (int ei = 0; ei < sampsCt; ++ei)
                         {
-                            data[ei] = fprl[ei] * (left/total) * this.sustain;
+                            data[ei] = fprl[ei] * (left / total);
                             left -= 1.0f;
                         }
                         this.releaseLeft -= sampsCt;
                         return;
                     }
-
-                    if(this.saftey > 0)
+                    else if (this.saftey > 0)
                         this.saftey -= size;
-
-                    return;
                 }
+                else
+                {
+                    this.AccumulateImpl_NonReleasePart(data, size, pcmFactory);
+                }
+            }
 
+            public void AccumulateImpl_NonReleasePart(float[] data, int size, IFPCMFactory pcmFactory)
+            { 
                 FPCM fpcm = pcmFactory.GetFPCM(size, true);
                 float[] fp = fpcm.buffer;
                 this.input.Accumulate(fp, size, pcmFactory);
