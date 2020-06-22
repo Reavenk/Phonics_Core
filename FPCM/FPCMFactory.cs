@@ -111,6 +111,13 @@ namespace PxPre
                 return fpcm;
             }
 
+            FPCM IFPCMFactory.GetZeroedFPCM(int samples, int start, int size)
+            {
+                FPCM fpcm = this.GetFPCM(samples);
+                fpcm.Zero(start, size);
+                return fpcm;
+            }
+
             
             FPCM IFPCMFactory.GetGlobalFPCM(int samples, bool zero)
             {
@@ -119,6 +126,13 @@ namespace PxPre
                 if(zero == true)
                     fpcm.Zero();
 
+                return fpcm;
+            }
+
+            FPCM IFPCMFactory.GetZeroedGlobalFPCM(int samples, int start, int size)
+            { 
+                FPCM fpcm = this.GetFPCM(samples);
+                fpcm.Zero(start, size);
                 return fpcm;
             }
         }

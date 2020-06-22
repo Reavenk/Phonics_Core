@@ -32,7 +32,7 @@ namespace PxPre
         public class GenAmplify : GenBase
         { 
             /// <summary>
-            /// The PCM stream to multiple.
+            /// The PCM stream to multiply.
             /// </summary>
             GenBase input;
 
@@ -48,17 +48,15 @@ namespace PxPre
                 this.amount = amount;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetFPCM(size, true);
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float[] a = fa.buffer;
 
-                this.input.Accumulate(a, size, pcmFactory);
+                this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
 
-                for (int i = 0; i < size; ++i)
-                {
-                    data[i] += a[i] * this.amount;
-                }
+                for (int i = start; i < start + size; ++i)
+                    data[i] = a[i] * this.amount;
             }
 
             public override PlayState Finished()

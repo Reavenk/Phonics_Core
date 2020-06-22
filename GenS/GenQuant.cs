@@ -39,14 +39,14 @@ namespace PxPre
                 this.input = input;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetFPCM(size, true);
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float [] a = fa.buffer;
-                this.input.Accumulate(a, size, pcmFactory);
+                this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
 
-                for(int i = 0; i < size; ++i)
-                    data[i] += ((float)(int)(a[i] * factor))*invFactor;
+                for(int i = start; i < start + size; ++i)
+                    data[i] = ((float)(int)(a[i] * factor))*invFactor;
             }
 
             public override PlayState Finished()

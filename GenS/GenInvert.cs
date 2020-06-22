@@ -1,6 +1,4 @@
-﻿// MIT License
-//
-// Copyright(c) 2020 Pixel Precision LLC
+﻿// Copyright(c) 2020 Pixel Precision LLC
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -20,42 +18,41 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PxPre
 {
     namespace Phonics
     {
         public class GenInvert : GenBase
-        { 
+        {
             /// <summary>
-            /// The PCM stream to negate.
+            /// The PCM stream to invert.
             /// </summary>
             GenBase input;
 
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="input">The PCM stream to negate</param>
             public GenInvert(GenBase input)
-                : base(0.0f, 0)
+            : base(0.0f, 0)
             { 
                 this.input = input;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetFPCM(size, true);
-                float [] a = fa.buffer;
-                this.input.Accumulate(a, size, pcmFactory);
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
+                float[] a = fa.buffer;
 
-                for(int i = 0; i < size; ++i)
-                    data[i] -= a[i];
+                this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
+
+                for (int i = start; i < start + size; ++i)
+                    data[i] += 0.5f - (a[i] - 0.5f);
             }
 
             public override PlayState Finished()
             {
-                if(this.input == null)
+                if (this.input == null)
                     return PlayState.Finished;
 
                 return this.input.Finished();

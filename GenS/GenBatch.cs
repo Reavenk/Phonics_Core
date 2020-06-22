@@ -46,21 +46,26 @@ namespace PxPre
                 this.batch = batch;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.batch.Length == 0)
                     return;
 
                 float inv = 1.0f / this.batch.Length;
 
+                FPCM fpcm = null;
                 foreach(GenBase gb in this.batch)
                 {
-                    FPCM fpcm = pcmFactory.GetFPCM(data.Length, true);
+                    if(fpcm == null)
+                        fpcm = pcmFactory.GetZeroedFPCM(start, size);
+                    else
+                        fpcm.Zero(start, size);
+
                     float [] rf = fpcm.buffer;
 
-                    gb.Accumulate(rf, size, pcmFactory);
+                    gb.Accumulate(rf, start, size, prefBuffSz, pcmFactory);
 
-                    for(int i = 0; i < size; ++i)
+                    for(int i = start; i < start + size; ++i)
                         data[i] += rf[i] * inv;
                 }
                 

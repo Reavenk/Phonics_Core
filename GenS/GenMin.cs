@@ -53,19 +53,19 @@ namespace PxPre
                 this.gmb = gmb;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetFPCM(data.Length, true);
-                FPCM fb = pcmFactory.GetFPCM(data.Length, true);
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
+                FPCM fb = pcmFactory.GetZeroedFPCM(start, size);
 
                 float[] a = fa.buffer;
                 float[] b = fb.buffer;
 
-                gma.Accumulate(a, size, pcmFactory);
-                gmb.Accumulate(b, size, pcmFactory);
+                gma.Accumulate(a, start, size, prefBuffSz, pcmFactory);
+                gmb.Accumulate(b, start, size, prefBuffSz, pcmFactory);
 
-                for (int i = 0; i < size; ++i)
-                    data[i] += (a[i] < b[i]) ? a[i] : b[i];
+                for (int i = start; i < start + size; ++i)
+                    data[i] = (a[i] < b[i]) ? a[i] : b[i];
             }
 
             public override PlayState Finished()

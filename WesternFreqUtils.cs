@@ -46,6 +46,27 @@ namespace PxPre
                 G, Gs
             }
 
+            public static Key RandomKey()
+            { 
+                switch(Random.Range(0, 12))
+                { 
+                    case 0: return Key.A;
+                    case 1: return Key.As;
+                    case 2: return Key.B;
+                    case 3: return Key.C;
+                    case 4: return Key.Cs;
+                    case 5: return Key.D;
+                    case 6: return Key.Ds;
+                    case 7: return Key.E;
+                    case 8: return Key.F;
+                    case 9: return Key.Fs;
+                    case 10: return Key.G;
+                    case 11: return Key.Gs;
+                }
+
+                return Key.C; // Arbitrary, shouldn't ever get here though
+            }
+
             /// <summary>
             /// The inversions of GetNote().
             /// </summary>

@@ -42,55 +42,63 @@ namespace PxPre
             /// </summary>
             bool passed = false;
 
-            /// <summary>
-            /// The duration of the attack.
-            /// </summary>
-            double attacktime;
+            int totalAttackSamples;
+            int itAttack = 0;
+            int offset = 0;
 
-            public GenLinAttack(double startTime, double attackTime, int samplesPerSec, GenBase gen)
-               : base(0.0f, samplesPerSec)
+            public GenLinAttack(int offsetSamples, int attackSamples, GenBase gen)
+               : base(0.0f, 0)
             {
                 this.gen = gen;
-                this.attacktime = attackTime;
+                this.offset = offsetSamples;
+                this.totalAttackSamples = attackSamples;
 
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.passed == true)
-                { 
-                    this.gen.Accumulate(data, size, pcmFactory);
-                }
-                else
                 {
-                    double inTime = this.CurTime / this.attacktime;
-                    double incr = 1.0 / (this.SamplesPerSec * this.attacktime);
-
-                    FPCM fa = pcmFactory.GetFPCM(size, true);
-                    float [] a = fa.buffer;
-                    this.gen.Accumulate(a, size, pcmFactory);
-
-                    // NOTE: This could be optimized if we figure out
-                    // the sample where the attack ends and avoid
-                    // checking inside the loop.
-                    for(int i = 0; i < size; ++i)
-                    {
-                        if(inTime >= 1.0)
-                        { 
-                            // The attack is now finished.
-                            this.passed = true;
-
-                            // Finishe the rest as a direct transfer and exit out
-                            for(int j = i; j < size; ++j)
-                                data[j] = a[j];
-
-                            return;
-                        }
-
-                        data[i] = (float)inTime * a[i];
-                        inTime += incr;
-                    }
+                    this.gen.Accumulate(data, start, size, prefBuffSz, pcmFactory);
+                    return;
                 }
+
+                if(this.offset > 0)
+                { 
+                    int burn = Min(size, this.offset);
+                    start += burn;
+                    size -= burn;
+                    this.offset -= burn;
+
+                    if(size <= 0)
+                        return;
+                }
+
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
+                float [] a = fa.buffer;
+                this.gen.Accumulate(a, start, size, prefBuffSz, pcmFactory);
+
+                float at = this.itAttack;
+                float tot = (float)this.totalAttackSamples;
+                int sampCt = Min(size, totalAttackSamples - itAttack);
+
+                for(int i = start; i < start + sampCt; ++i)
+                { 
+                    float v = at / tot;
+                    at += 1.0f;
+
+                    data[i] = a[i] * v;
+                }
+
+                start += sampCt;
+                size -= sampCt;
+                this.itAttack += sampCt;
+
+                if(this.itAttack >= this.totalAttackSamples)
+                    this.passed = true;
+
+                for(int i = start; i < start + size; ++i)
+                    data[i] = a[i];
             }
 
             public override PlayState Finished()

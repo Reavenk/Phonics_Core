@@ -32,18 +32,18 @@ namespace PxPre
                 : base(freq, samplesPerSec, amplitude)
             { }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 double tIt = this.CurTime;
                 double incr = this.TimePerSample;
-                for (int i = 0; i < size; ++i)
+                for (int i = start; i < start + size; ++i)
                 {
                     float fVal = (float)((tIt * this.Freq) % 1.0) * 2.0f;
 
                     if(fVal > 1.0f)
                         fVal = 1.0f - (fVal - 1.0f);
 
-                    data[i] += (fVal - 0.5f) * 2.0f * this.amplitude;
+                    data[i] = (fVal - 0.5f) * 2.0f * this.amplitude;
                     tIt += incr;
                 }
             }

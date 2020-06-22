@@ -59,9 +59,24 @@ namespace PxPre
                 return ret;
             }
 
+            FPCM IFPCMFactory.GetZeroedFPCM(int samples, int start, int size)
+            { 
+                FPCM ret = this.parent.GetZeroedFPCM(samples, start, size);
+                if(ret == null)
+                    return null;
+
+                this.allocated.Add(ret);
+                return ret;
+            }
+
             FPCM IFPCMFactory.GetGlobalFPCM(int samples, bool zero)
             { 
                 return this.parent.GetGlobalFPCM(samples, zero);
+            }
+
+            FPCM IFPCMFactory.GetZeroedGlobalFPCM(int samples, int start, int size)
+            { 
+                return this.parent.GetZeroedGlobalFPCM(samples, start, size);
             }
         }
     }

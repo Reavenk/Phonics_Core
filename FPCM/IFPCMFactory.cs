@@ -48,6 +48,8 @@ namespace PxPre
             /// de-owned and returned. If none are available, a new one will be allocated.</returns>
             FPCM GetFPCM(int samples, bool zero);
 
+            FPCM GetZeroedFPCM(int samples, int start, int size);
+
             /// <summary>
             /// Request an FPCM of a requested size. This is an implementation
             /// for IFPCMFactor that does NOT give the FPCM scope.
@@ -57,6 +59,8 @@ namespace PxPre
             /// <returns>An FPCM of the correct size. If one is available, it will be
             /// de-owned and returned. If none are available, a new one will be allocated.</returns>
             FPCM GetGlobalFPCM(int samples, bool zero);
+
+            FPCM GetZeroedGlobalFPCM(int samples, int start, int size);
         }
     }
 }

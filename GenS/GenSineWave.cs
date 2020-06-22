@@ -44,13 +44,13 @@ namespace PxPre
                 this.timeToFreq = dTau * freq;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 double tIt = this.CurTime;
                 double incr = this.TimePerSample;
-                for (int i = 0; i < size; ++i)
+                for (int i = start; i < start + size; ++i)
                 {
-                    data[i] += Mathf.Sin((float)(tIt * this.TimeToFreq)) * this.amplitude;
+                    data[i] = Mathf.Sin((float)(tIt * this.TimeToFreq)) * this.amplitude;
                     tIt += incr;
                 }
             }

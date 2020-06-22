@@ -67,6 +67,12 @@ namespace PxPre
                 for(int i = 0; i < samples; ++i)
                     this.buffer[i] = 0.0f;
             }
+
+            public void Zero(int start, int samples)
+            { 
+                for(int i = start; i < samples; ++i)
+                    this.buffer[i] = 0.0f;
+            }
         }
     }
 }

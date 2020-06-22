@@ -91,7 +91,7 @@ namespace PxPre
                 this.invSustain = 1.0f - sustain;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.durationSamples <= 0)
                 {
@@ -105,68 +105,77 @@ namespace PxPre
                     else
                     {
                         // If duration is over, we're in sustain
-                        FPCM fsus = pcmFactory.GetFPCM(size, true);
+                        FPCM fsus = pcmFactory.GetZeroedFPCM(start, size);
                         float[] sus = fsus.buffer;
-                        this.gen.Accumulate(sus, size, pcmFactory);
-                        for(int i = 0; i < size; ++i)
-                            data[i] += sus[i] * this.sustain;
+                        this.gen.Accumulate(sus, start, size, prefBuffSz, pcmFactory);
+                        for(int i = start; i < start + size; ++i)
+                            data[i] = sus[i] * this.sustain;
                     }
                     return;
                 }
 
                 // Are we at a time before the decay is activated?
+                // If it's going to be that way for the entire decay, just 
+                // relay it.
                 if (this.offsetSamples > size)
                 {
                     this.offsetSamples -= size;
-                    this.gen.Accumulate(data, size, pcmFactory);
+                    this.gen.Accumulate(data, start, size, prefBuffSz, pcmFactory);
                     return;
                 }
 
-                FPCM fa = pcmFactory.GetFPCM(size, true);
+                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float[] a = fa.buffer;
-                this.gen.Accumulate(a, size, pcmFactory);
+                this.gen.Accumulate(a, start, size, prefBuffSz, pcmFactory);
 
                 // Are we at a time before the decay is activated, but 
                 // will need to start the decay before we exit?
-                int it = 0;
                 if (this.offsetSamples > 0)
                 { 
-                    for(int i = 0; i < this.offsetSamples; ++i)
+                    int endOS = start + this.offsetSamples;
+                    for(int i = start; i < start + endOS; ++i)
                         data[i] = a[i];
 
-                    it = this.offsetSamples;
+                    size -= this.offsetSamples;
+                    start += this.offsetSamples;
                     this.offsetSamples = 0;
                 }
 
                 // The decay. We have two versions, because if the sustain ramps to zero, we can 
                 // avoid some lerp math.
                 float total = totalDurationSamples;
-                int end = Mathf.Min(size, it + this.durationSamples);
+                int decSamps = Mathf.Min(size, this.durationSamples);
+                int end = start + decSamps;
                 if(this.sustain == 0.0f)
                 {
-                    for (; it < end; ++it)
+                    float durs = (float)this.durationSamples;
+                    for (int i = start; i < end; ++i)
                     {
-                        float lam = (float)this.durationSamples / total;
-                        data[it] += a[it] * lam;
+                        float lam = durs / total;
+                        data[i] = a[i] * lam;
+                        durs -= 1.0f;
 
-                        --this.durationSamples;
                     }
+                    durationSamples -= decSamps;
+                    
                 }
                 else
                 {
-                    for (; it < end; ++it)
-                    {
-                        float lam = sustain + (float)this.durationSamples / total * this.invSustain;
-                        data[it] += a[it] * lam;
 
-                        --this.durationSamples;
+                    float durs = (float)this.durationSamples;
+                    for (int i = start; i < end; ++i)
+                    {
+                        float lam = sustain + durs / total * this.invSustain;
+                        data[i] += a[i] * lam;
+                        durs -= 1.0f;
                     }
+                    start += decSamps;
+                    size -= decSamps;
+                    this.durationSamples -= decSamps;
 
                     // If we finish the ramp in the middle, we need to fill the rest with sustain
-                    for(; it < size; ++it)
-                    {
-                        data[it] += a[it] * this.sustain;
-                    }
+                    for(int i = start; i < start + size; ++i)
+                        data[i] = a[i] * this.sustain;
                 }
             }
 

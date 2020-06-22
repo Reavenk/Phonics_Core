@@ -30,130 +30,209 @@ namespace PxPre
         public class GenDelay : GenBase
         {
             int voices;
-            int sampleDist;
-            float volAtten;
             GenBase input;
 
             public struct BufferRef
             { 
+                /// <summary>
+                /// The total number of samples that have been written
+                /// </summary>
                 public int totalOffset;
+
+                /// <summary>
+                /// The sample we left off at in the entry buffers[this.idx]
+                /// </summary>
                 public int sampleIdx;
+
+                /// <summary>
+                /// The index into buffers that we're concerned about.
+                /// </summary>
                 public int idx;
+
+
+                /// <summary>
+                /// cached volume attenuation.
+                /// </summary>
+                public float atten;
             }
 
-            List<FPCM> buffers = new List<FPCM>();
+            public struct BufferedFPCM
+            { 
+                public readonly FPCM buffer;
+                public readonly int cachedLen;
+                public readonly int cachedEnd;
+                public readonly int offset;
+
+                public int readLeft;
+
+                public BufferedFPCM(FPCM fpcm, int offset)
+                { 
+                    this.buffer = fpcm;
+                    this.offset = offset;
+                    this.cachedLen = fpcm.buffer.Length;
+                    this.cachedEnd = offset + this.cachedLen;
+                    this.readLeft = this.cachedLen;
+                }
+            }
+
+            /// <summary>
+            /// The next offset to pass into BufferedFPCM constructor.
+            /// </summary>
+            int nextOffset = 0;
+
+            List<BufferedFPCM> buffers = new List<BufferedFPCM>();
+
+            /// <summary>
+            /// An entry for every voice, of where they're reading from.
+            /// </summary>
             BufferRef [] rbuffRef = null;
 
             public GenDelay(int samplesPerSec, GenBase input, int voices, float offsetTime, float volAtten)
                 : base(0.0f, samplesPerSec)
             { 
                 this.voices = Mathf.Max(voices, 1);
-                this.volAtten = volAtten;
 
-                this.sampleDist = (int)(samplesPerSec * offsetTime);
-                this.sampleDist = Mathf.Max(1, this.sampleDist);
+                int sampleDist = (int)(samplesPerSec * offsetTime);
+                sampleDist = Mathf.Max(1, sampleDist);
 
                 this.input = input;
 
                 this.rbuffRef = new BufferRef[this.voices];
+                float voiceVol = 1.0f;
                 for(int i = 0; i < this.voices; ++i)
                 {
                     this.rbuffRef[i] = new BufferRef();
-                    this.rbuffRef[i].idx = -1;
+                    this.rbuffRef[i].idx = 0;
                     this.rbuffRef[i].sampleIdx = 0;
-                    this.rbuffRef[i].totalOffset = -this.sampleDist * (i + 1);
+                    this.rbuffRef[i].totalOffset = -sampleDist * i;
+                    this.rbuffRef[i].atten = voiceVol;
+
+                    voiceVol *= volAtten;
                 }
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             {
-                // Get the current input's data
-                FPCM fpcm = pcmFactory.GetGlobalFPCM(size, true);
-                float [] fp = fpcm.buffer;
-                this.input.Accumulate(fp, size, pcmFactory);
-                // Record it
-                this.buffers.Add(fpcm);
-
-                // Transfer the raw
-                for (int i = 0; i < size; ++i)
-                    data[i] += fp[i];
-
-                const int toohighIdx = 9999;
-                int minidx = toohighIdx;
-
-                float attamp = this.volAtten;
-                for(int i = 0; i < this.rbuffRef.Length; ++i)
-                {
-                    BufferRef br = this.rbuffRef[i];
-                    int writeIdx = 0;
-                    if(br.idx == -1)
-                    { 
-                        // If we haven't advanced enough steps to start playing,
-                        // just record of samples and move on.
-                        if(br.totalOffset <= -size)
-                        {
-                            this.rbuffRef[i].totalOffset += size;
-                            continue;
-                        }
-
-                        // Start writing at the first buffer we've queued
-                        br.idx = 0;
-                        // Start reading from that buffer at the first sample.
-                        br.sampleIdx = 0;
-                        // Jump to the correct position to start writing
-                        writeIdx = -br.totalOffset;
-                    }
-
-                    while(writeIdx < size)
-                    {
-                        if(br.sampleIdx >= this.buffers[br.idx].buffer.Length)
-                        { 
-                            br.sampleIdx = 0;
-                            ++br.idx;
-                        }
-
-                        float [] rf = this.buffers[br.idx].buffer;
-                        int incr = Mathf.Min(rf.Length - br.sampleIdx, size - writeIdx);
-                        int end = writeIdx + incr;
-                        for(; writeIdx < end; ++writeIdx)
-                        { 
-                            data[writeIdx] += rf[br.sampleIdx] * attamp;
-                            ++br.sampleIdx;
-                        }
-                        writeIdx = end;
-
-                        // Do we need to advance the buffer index we're looking into?
-                        if(br.sampleIdx >= rf.Length)
-                        { 
-                            ++br.idx;
-                            rf = this.buffers[br.idx].buffer;
-                            br.sampleIdx = 0;
-                            br.totalOffset += incr;
-                        }
-                    }
-
-                    minidx = Mathf.Max(minidx, br.idx);
-                    this.rbuffRef[i] = br;
-                    attamp *= this.volAtten;
+                //  BYPASS IF NO POINT NOT TO
+                ////////////////////////////////////////////////////////////////////////////////
+                if(this.voices <= 1)
+                { 
+                    // This will probably rarely ever happen because it defeats the purpose of using
+                    // this node, but I'll take the optimization where I can get it.
+                    this.input.Accumulate(data, start, size, prefBufSz, pcmFactory);
                 }
 
-                if(minidx != toohighIdx && minidx > 0)
+                //  READ IN NEW INFORMATION BY APPENDING BUFFERS
+                ////////////////////////////////////////////////////////////////////////////////
+                int readAmt = size;
+                while(readAmt > 0)
                 { 
-                    int samples = 0;
-                    for(int i = 0; i < minidx; ++i)
-                        samples += this.buffers[i].buffer.Length;
+                    if(buffers.Count == 0)
+                    { 
+                        FPCM firstEntry = pcmFactory.GetZeroedGlobalFPCM(0, prefBufSz);
+                        BufferedFPCM bfpmFirst = new BufferedFPCM(firstEntry, this.nextOffset);
+                        this.nextOffset += firstEntry.buffer.Length;
 
-                    for(int i = minidx; minidx >= 0; --i)
-                    {
-                        buffers[i].Release();
-                        buffers.RemoveAt(i);
+                        this.buffers.Add(bfpmFirst);
                     }
 
-                    for(int i = 0; i < this.rbuffRef.Length; ++i)
-                    {
-                        this.rbuffRef[i].idx -= minidx;
-                        this.rbuffRef[i].totalOffset -= samples;
+                    int lastIdx = this.buffers.Count - 1;
+                    BufferedFPCM last = this.buffers[lastIdx];
+
+                    int readBufAmt = Min(readAmt, last.readLeft);
+                    if(readBufAmt != 0)
+                    { 
+                        int readHead = last.cachedLen - last.readLeft;
+                        // Read the new stuff requested
+                        this.input.Accumulate(
+                            last.buffer.buffer, 
+                            readHead, 
+                            readBufAmt, 
+                            prefBufSz, 
+                            pcmFactory);
+
+                        // Update and save it back
+                        last.readLeft -= readBufAmt;
+                        this.buffers[lastIdx] = last;
+                        readAmt -= readBufAmt;
                     }
+
+                    if(readAmt <= 0)
+                        break;
+
+                    // If it's not enough, create another buffer and continue. We 
+                    // only create it here, because it will be filled the next 
+                    // round-about in this loop.
+                    //
+                    // Exact same as above.
+                    FPCM newEntry = pcmFactory.GetZeroedGlobalFPCM(0, prefBufSz);
+                    BufferedFPCM bfpm = new BufferedFPCM(newEntry, this.nextOffset);
+                    this.nextOffset += newEntry.buffer.Length;
+                    this.buffers.Add(bfpm);
+                }
+
+                //  WRITE INTO OUTPUT BUFFER
+                ////////////////////////////////////////////////////////////////////////////////
+                
+                int lowestIndexVal = int.MaxValue;
+
+                for( int buffIt = 0; buffIt < this.rbuffRef.Length; ++buffIt)
+                { 
+                    int bsize = size;
+                    int bstart = start;
+
+                    BufferRef br = this.rbuffRef[buffIt];
+
+                    while(bsize > 0)
+                    { 
+                        if(br.totalOffset < 0)
+                        { 
+                            int toSkip = Min(-br.totalOffset, bsize);
+                            bsize -= toSkip;
+                            bstart += toSkip;
+                            br.totalOffset += toSkip;
+
+                            if(bsize <= 0)
+                                break;
+                        }
+
+                        int endOffset = br.totalOffset + bsize;
+                        BufferedFPCM buffer = this.buffers[br.idx];
+                        float [] a = buffer.buffer.buffer; // Hmm, tic tac toe
+                        int endBuffer = buffer.cachedEnd;
+                        // Either going to read to the end of the buffer, or the 
+                        // end of the requested stream read, whichever comes first
+                        int canReadLeft = Min(endOffset, endBuffer) - br.totalOffset;
+
+                        int startingOffset = br.totalOffset - buffer.offset;
+                        for(int i = 0; i < canReadLeft; ++i)
+                            data[bstart + i] += br.atten * a[startingOffset + i];
+
+                        bstart += canReadLeft;
+                        bsize -= canReadLeft;
+                        br.totalOffset += canReadLeft;
+
+                        // If there's still more to read, that needs to be done
+                        // through the next buffer.
+                        if(bsize > 0)
+                            ++br.idx;
+
+                    }
+
+                    lowestIndexVal = Min(lowestIndexVal, br.idx);
+                    this.rbuffRef[buffIt] = br;
+                }
+                // MAINTENENCE, GET RID OF OLD GRODY STUFF
+                ////////////////////////////////////////////////////////////////////////////////
+                if(lowestIndexVal != 0)
+                { 
+                    for(int i = 0; i < lowestIndexVal; ++i)
+                        this.buffers[i].buffer.Release();
+                
+                    this.buffers.RemoveRange(0, lowestIndexVal);
+                
+                    for( int i = 0; i < this.rbuffRef.Length; ++i)
+                        this.rbuffRef[i].idx -= lowestIndexVal;
                 }
             }
 
@@ -167,8 +246,8 @@ namespace PxPre
 
             public override void Deconstruct()
             {
-                foreach(FPCM fpcm in this.buffers)
-                    fpcm.Release();
+                foreach(BufferedFPCM b in this.buffers)
+                    b.buffer.Release();
 
                 this.buffers.Clear();
             }

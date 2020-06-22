@@ -62,6 +62,20 @@ namespace PxPre
                 public AudioSource source;
             }
 
+            public struct MeterRecord
+            { 
+                public GenMeter meter;
+                public MeterValue meterValue;
+                public AudioSource playingSource;
+
+                public MeterRecord(GenMeter meter, AudioSource playingSource)
+                { 
+                    this.meter = meter;
+                    this.meterValue = meter.Meter;
+                    this.playingSource = playingSource;
+                }
+            }
+
             // The counter used to generate unique PlayeringNode ids
             private int ctr = 0;
 
@@ -78,6 +92,14 @@ namespace PxPre
             // The active notes currently playing but are being released.
             List<PlayingNote> releasingNotes =
                 new List<PlayingNote>();
+
+            Dictionary<GenBase, MeterRecord> meterRecords = 
+                new Dictionary<GenBase, MeterRecord>();
+
+            float masterVol = 0.8f;
+            public float MasterVol{get{return this.masterVol; } }
+
+            public bool metered = true;
 
             public GenManager(GameObject sourceHost)
             { 
@@ -106,6 +128,18 @@ namespace PxPre
 
                 int retId = this.ctr;
                 ++this.ctr;
+
+                source.volume = this.masterVol;
+
+                // Wrap meter analysis around it if needed.
+                // Users of the meter "just have to know" that the meter results
+                // are put into MeterValue.DefaultMeter
+                if (this.metered == true)
+                {
+                    GenMeter genMeter = new GenMeter(gen);
+                    gen = genMeter;
+                    meterRecords.Add(genMeter, new MeterRecord(genMeter, source));
+                }
 
                 PlayingNote pn = new PlayingNote();
                 pn.id = retId;
@@ -158,7 +192,10 @@ namespace PxPre
                     }
 
                     if (rm == true)
+                    {
                         this.StopPlayingNote(pn);
+                        this.meterRecords.Remove(pn.generator);
+                    }
                 }
                 this.activeNotes.Remove(idx);
                 return true;
@@ -188,7 +225,26 @@ namespace PxPre
                 }
                 
                 this.releasingNotes.Clear();
+                this.meterRecords.Clear();
                 return stoppedAny;
+            }
+
+            public float EstimateMeter()
+            { 
+                float max = 0.0f;
+
+                foreach(KeyValuePair<GenBase, MeterRecord> kvp in this.meterRecords)
+                { 
+                    float contrib =
+                        Mathf.Max(
+                            -kvp.Value.meterValue.min,
+                            kvp.Value.meterValue.max);
+
+                    contrib *= kvp.Value.playingSource.volume;
+                    max += contrib;
+                }
+
+                return max;
             }
 
             /// <summary>
@@ -223,6 +279,7 @@ namespace PxPre
                         this.audioSources.Add(pn.source);
 
                         this.releasingNotes.RemoveAt(i);
+                        this.meterRecords.Remove(pn.generator);
                         ++finished;
                     }
                 }
@@ -237,6 +294,24 @@ namespace PxPre
             public bool AnyPlaying()
             {
                 return this.activeNotes.Count > 0 || this.releasingNotes.Count > 0;
+            }
+
+            public void SetMasterVol(float val, bool changeExisting = true)
+            { 
+                this.masterVol = Mathf.Clamp01(val);
+
+                // The active notes currently playing but are being released.
+                List<PlayingNote> releasingNotes =
+                    new List<PlayingNote>();
+
+                if (changeExisting == true)
+                {
+                    foreach(KeyValuePair<int, PlayingNote> kvp in this.activeNotes)
+                        kvp.Value.source.volume = this.masterVol;
+
+                    foreach(PlayingNote pn in this.releasingNotes)
+                        pn.source.volume = this.masterVol;
+                }
             }
         }
     }

@@ -64,6 +64,18 @@ namespace PxPre
             public  const float fTau = 6.28318530718f;
             public  const double dTau = 6.28318530718;
 
+            public static float Max(float a, float b)
+            { return a > b ? a : b; }
+
+            public static float Min(float a, float b)
+            { return a < b ? a : b; }
+
+            public static int Max(int a, int b)
+            { return a > b ? a : b;}
+
+            public static int Min(int a, int b)
+            { return a < b ? a : b; }
+
             public long it = 0;
             public long It { get { return this.it; } }
 
@@ -89,22 +101,27 @@ namespace PxPre
                 this.timePerSample = 1.0 / samplesPerSec;
             }
 
-            public abstract void AccumulateImpl(float [] data, int size, IFPCMFactory pcmFactory);
+            public abstract void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory);
 
-            public void Accumulate(float [] data, int size, IFPCMFactory pcmFactory)
+            public void Accumulate(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                this.AccumulateImpl(data, size, pcmFactory);
+                this.AccumulateImpl(data, start, size, prefBuffSz, pcmFactory);
 
                 this.curTime += size * timePerSample;
                 this.it += size;
             }
 
-            public void Set(float [] data, int size, IFPCMFactory pcmFactory)
+            public void Set(float [] data, int size, FPCMFactoryGenLimit pcmFactory)
             {
-                for(int i = 0; i < data.Length; ++i)
+                for(int i = 0; i < size; ++i)
                     data[i] = 0.0f;
 
-                this.AccumulateImpl(data, size, pcmFactory);
+                FPCMFactoryGenLimit fgl = 
+                    new FPCMFactoryGenLimit(pcmFactory, size);
+
+                this.AccumulateImpl(data, 0, size, size, fgl);
+
+                fgl.ReleaseScope();
 
                 this.curTime += data.Length * timePerSample;
                 this.it += data.Length;
@@ -113,7 +130,8 @@ namespace PxPre
             public void ReaderCallback(float[] data)
             {
                 IFPCMFactory pcmFactory = FPCMFactory.Instance;
-                this.Set(data, data.Length, pcmFactory);
+                FPCMFactoryGenLimit fgl = new FPCMFactoryGenLimit(pcmFactory, data.Length);
+                this.Set(data, data.Length, fgl);
             }
 
             public void SetPositionCallback(int position)

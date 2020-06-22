@@ -33,7 +33,8 @@ namespace PxPre
         public class GenWhite : GenBase
         {
             const int NoiseBufferSz = 44000;
-            static int noiseIt = 0;
+
+            int noiseIt = 0;
             static float [] bakedNoise = null;
 
             float amplitude = 1.0f;
@@ -55,15 +56,25 @@ namespace PxPre
                 this.amplitude = amplitude;
             }
 
-            public override void AccumulateImpl(float[] data, int size, IFPCMFactory pcmFactory)
+            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                double tIt = this.CurTime;
-                double incr = this.TimePerSample;
-                for (int i = 0; i < size; ++i)
-                {
-                    data[i] += bakedNoise[noiseIt] * this.amplitude;
-                    noiseIt = (noiseIt + 1) % NoiseBufferSz;
+
+                int i = start;
+                while(size > 0)
+                { 
+                    if(noiseIt >= NoiseBufferSz)
+                        this.noiseIt = 0;
+
+                    int sz = Mathf.Min(NoiseBufferSz - this.noiseIt, size); 
+                    int end = i + sz;
+                
+                    for (; i < end; ++i)
+                        data[i] = bakedNoise[i] * this.amplitude;
+                    
+                    noiseIt += sz;
+                    size -= sz;
                 }
+                
             }
 
             public override PlayState Finished()
