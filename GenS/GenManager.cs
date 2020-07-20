@@ -43,8 +43,7 @@ namespace PxPre
                 /// </summary>
                 public int id;
 
-                // The generator is used to generate PCM for the clip, which plays
-                // though Unity via the AudioSource.
+                public float velocity = 0.75f;
 
                 /// <summary>
                 /// The generator generating the PCM data.
@@ -113,7 +112,7 @@ namespace PxPre
             /// <param name="samples">The number of samples for the PCM buffer.</param>
             /// <param name="samplesPerSec">Samples per second for the PCM stream.</param>
             /// <returns></returns>
-            public int StartGenerator(GenBase gen, int samples, int samplesPerSec)
+            public int StartGenerator(GenBase gen, float velocity, int samples, int samplesPerSec)
             {
                 AudioSource source = null;
                 if (this.audioSources.Count > 0)
@@ -129,7 +128,7 @@ namespace PxPre
                 int retId = this.ctr;
                 ++this.ctr;
 
-                source.volume = this.masterVol;
+                source.volume = this.masterVol * velocity;
 
                 // Wrap meter analysis around it if needed.
                 // Users of the meter "just have to know" that the meter results
@@ -143,6 +142,7 @@ namespace PxPre
 
                 PlayingNote pn = new PlayingNote();
                 pn.id = retId;
+                pn.velocity = velocity;
                 pn.generator = gen;
                 pn.clip =
                     AudioClip.Create(
@@ -307,10 +307,10 @@ namespace PxPre
                 if (changeExisting == true)
                 {
                     foreach(KeyValuePair<int, PlayingNote> kvp in this.activeNotes)
-                        kvp.Value.source.volume = this.masterVol;
+                        kvp.Value.source.volume = this.masterVol * kvp.Value.velocity;
 
                     foreach(PlayingNote pn in this.releasingNotes)
-                        pn.source.volume = this.masterVol;
+                        pn.source.volume = this.masterVol * pn.velocity;
                 }
             }
         }
