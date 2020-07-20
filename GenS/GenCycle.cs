@@ -30,7 +30,13 @@ namespace PxPre
     {
         public class GenCycle : GenBase
         {
-        
+            public enum OffsetPass
+            { 
+                Pass,
+                Silent,
+                Hold
+            }
+
             struct Recording
             { 
                 public FPCM buffer;
@@ -47,39 +53,63 @@ namespace PxPre
                 }
             }
 
+            // The amount to skip before recording?
+            // This will be passed
             int offset = 0;
             int recordAmt;
+
+            /// <summary>
+            /// The input to process (cycle)
+            /// </summary>
             GenBase input;
             
-            // When recording, how much is left on the last recording entry??
-            int lastRecordingLeft = 0;
-            // The sample count of the last recording's end position when lined up with 
-            // all the other buffers;
-            int lastRecordingEnd = 0;
-            int totalRecordingLeft;
+            int recordingIt = 0;
 
             // When doing playback, the buffer to stream from
             int bufferIdx = 0;
             int playbackIt = 0;
-            List<Recording> recordings = new List<Recording>();
 
-            public GenCycle(int offsetSamples, int recordAmt, GenBase input)
+            OffsetPass passOffset = OffsetPass.Pass;
+
+            // The entire buffer being recorded and cycled through. There's an argument to be made 
+            // that we chould store an array of chunks in case the entire buffer isn't played, but
+            // we've made out decision for now.
+            float [] rfs = null;
+
+            public GenCycle(int offsetSamples, int recordAmt, OffsetPass passOffset, GenBase input)
                 : base(0.0f, 0)
             { 
                 this.offset = offsetSamples;
                 this.input = input;
                 this.recordAmt = recordAmt;
-                this.totalRecordingLeft = recordAmt;
+                this.passOffset = passOffset;
 
                 // Kept until ready to playback
                 this.playbackIt = 0;
+
+                this.rfs = new float[recordAmt];
             }
         
             public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
+
                 if(this.offset > 0)
                 {
                     int of = Min(this.offset, size);
+                    if(this.passOffset == OffsetPass.Silent)
+                    {
+                        // If silent, we still need to let time pass for it, so
+                        // we need to burn it.
+                        FPCM fpcm = pcmFactory.GetZeroedFPCM(start, size);
+                        this.input.Accumulate(fpcm.buffer, start, of, prefBuffSz, pcmFactory);
+                    }
+                    else if(this.passOffset == OffsetPass.Pass)
+                    { 
+                        this.input.Accumulate(data, start, of, prefBuffSz, pcmFactory);
+                    }
+                    else if(this.passOffset == OffsetPass.Hold)
+                    { } // Do nothing
+
                     this.offset -= of;
                     start += of;
                     size -= of;
@@ -88,115 +118,80 @@ namespace PxPre
                         return;
                 }
 
-                while(this.totalRecordingLeft > 0)
+                if(this.recordingIt < this.rfs.Length)
                 { 
-                    if(this.lastRecordingLeft <= 0)
+                    int recAmt = Min(size, this.rfs.Length - this.recordingIt);
+
+                    FPCM fpcm = pcmFactory.GetZeroedFPCM(0, size);
+                    float [] lbuf = fpcm.buffer;
+
+                    this.input.Accumulate(lbuf, 0, recAmt, prefBuffSz, pcmFactory);
+
+                    for(int i = 0; i < recAmt; ++i)
                     { 
-                        FPCM fpcm = pcmFactory.GetZeroedGlobalFPCM(0, prefBuffSz);
-                        Recording r = new Recording(fpcm, this.lastRecordingEnd);
-                        this.recordings.Add(r);
-                        this.lastRecordingEnd += r.length;
-                        this.lastRecordingLeft = r.length;
+                        data[start + i] = lbuf[i];
+                        rfs[recordingIt + i] = lbuf[i];
                     }
 
-                    Recording rLast = this.recordings[this.recordings.Count - 1];
-                    int recordingHead = rLast.length - this.lastRecordingLeft;
+                    this.recordingIt += recAmt;
+                    start += recAmt;
+                    size -= recAmt;
 
-                    int saveLen = Min(this.lastRecordingLeft, this.totalRecordingLeft);
-                    saveLen = Min(size, saveLen);
-
-                    // Accumulate into the recording
-                    float [] lbuf = rLast.buffer.buffer;
-                    this.input.Accumulate(lbuf, recordingHead, saveLen, prefBuffSz, pcmFactory);
-
-                    // Not only do we have to save it while recording, we also need to 
-                    // output it...
-                    for(int i = 0; i < start+saveLen; ++i)
-                        data[start + i] = lbuf[recordingHead + i];
-
-                    // And update everything that needs updating
-                    size -= saveLen;
-                    start += saveLen;
-                    this.lastRecordingLeft -= saveLen;
-                    this.totalRecordingLeft -= saveLen;
-
-                    this.recordings[this.recordings.Count - 1] = rLast;
-
-                    if(this.totalRecordingLeft == 0)
-                    {
-                        // If the recording is thin, it's in our best interest to expand it as much as possible
-                        // so we can do one loop with cyclical information with the buffer we have instead 
-                        // of many small broken loops (in a bigger loop) afterwards.
-                        if(this.recordings.Count == 1 && (this.recordAmt / recordings[0].length) > 1)
+                    if(this.recordingIt == this.rfs.Length)
+                    { 
+                        // If the buffer size is tiny, we're going to duplicate it to a sane amount
+                        // so we don't have many tiny cycles when it comes to replaying it.
+                        if(this.rfs.Length <  prefBuffSz)
                         { 
-                            int loopsToFit = this.recordAmt / recordings[0].length;
-                            float [] rf = recordings[0].buffer.buffer;
-                            for(int i = 1; i < loopsToFit; ++i)
-                            { 
-                                int offset = i * this.recordAmt;
-                                for(int j = 0; j < this.recordAmt; ++j)
-                                    rf[offset + j] = rf[j];
+                            int repCt = this.rfs.Length / prefBuffSz;
+                            if(repCt > 1)
+                            {
+                                float [] rfOld = this.rfs;
+                                int oldSz = this.rfs.Length;
+
+                                // Repeat the buffer
+                                this.rfs = new float[oldSz * repCt];
+                                for(int i = 1; i < repCt; ++i)
+                                { 
+                                    int baseIdx = i * oldSz;
+                                    for(int j = 0; j < oldSz; ++j)
+                                        this.rfs[baseIdx + j] = rfOld[j];
+                                }
                             }
-                            this.recordAmt *= loopsToFit;
                         }
                     }
-                    // If we handled all we could, we'll continue later.
-                    if(size == 0)
-                        return;
                 }
-
-                
-
-                // Dunno how this would happen, but a simple sanity check.
-                if(this.recordings.Count == 0)
-                    return;
 
                 while(size > 0)
                 { 
-                    // Time for playback!
-                    Recording cur = this.recordings[this.bufferIdx];
-                    float [] curBuf = cur.buffer.buffer;
+                    this.playbackIt %= this.rfs.Length;
 
-                    // The lowest sample counter between 
-                    // - when the current buffer we're reading ends
-                    // - when we've reached the end of all playback (which probably won't align with the end buffer count)
-                    // - the number we're allowed to write for the requested size.
-                    int canPlay = Min(cur.cachedEnd - playbackIt, size);
-                    canPlay = Min(canPlay, this.recordAmt - this.playbackIt);
+                    int sameCt = Min(this.rfs.Length - this.playbackIt, size);
 
-                    int writehead = this.playbackIt - cur.cachedStart;
-                    for(int i = 0; i < canPlay; ++i)
-                        data[start + i] = curBuf[writehead + i];
-
-                    // Increment and update
-                    start += canPlay;
-                    size -= canPlay;
-                    //
-                    this.playbackIt += canPlay;
-                    if(this.playbackIt >= cur.cachedEnd)
-                    {
-                        this.bufferIdx += 1;
-                        if(this.bufferIdx >= this.recordings.Count)
-                        { 
-                            this.bufferIdx = 0;
-                            this.playbackIt = 0;
-                        }
+                    for(int i = 0; i < sameCt; ++i)
+                    { 
+                        data[start + i] = rfs[this.playbackIt + i];
                     }
+                    
+                    this.playbackIt += sameCt;
+                    start += sameCt;
+                    size -= sameCt;
                 }
             }
         
             public override PlayState Finished()
             {
-                if(this.input == null)
+                if(this.input == null || this.rfs == null)
                     return PlayState.Finished;
         
-                return this.input.Finished();
+                if(this.recordingIt < this.rfs.Length)
+                    return this.input.Finished();
+
+                return PlayState.Constant;
             }
         
             public override void Deconstruct()
             {
-                foreach(Recording r in this.recordings)
-                    r.buffer.Release();
             }
 
             public override void ReportChildren(List<GenBase> lst)
