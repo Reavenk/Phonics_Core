@@ -32,7 +32,7 @@ namespace PxPre
         /// </summary>
         public class GenWhite : GenBase
         {
-            const int NoiseBufferSz = 44000;
+            const int NoiseBufferSz = 44100;
 
             int noiseIt = 0;
             static float [] bakedNoise = null;
