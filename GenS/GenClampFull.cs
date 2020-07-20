@@ -46,11 +46,11 @@ namespace PxPre
                 for(int i = start; i < start + size; ++i)
                 { 
                     if(a[i] < -1.0f)
-                        data[i] -= 1.0f;
+                        data[i] = -1.0f;
                     else if(a[i] > 1.0f)
-                        data[i] += 1.0f;
+                        data[i] = 1.0f;
                     else
-                        data[i] += a[i];
+                        data[i] = a[i];
                 }
             }
 
