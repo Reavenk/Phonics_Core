@@ -40,7 +40,7 @@ namespace PxPre
                 this.gmFactor = gmFactor;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 FPCM fb = pcmFactory.GetZeroedFPCM(start, size);
@@ -50,31 +50,21 @@ namespace PxPre
                 float [] b = fb.buffer;
                 float [] f = ff.buffer;
 
-                this.gma.Accumulate(        a, start, size, prefBuffSz, pcmFactory);
-                this.gmb.Accumulate(        b, start, size, prefBuffSz, pcmFactory);
-                this.gmFactor.Accumulate(   f, start, size, prefBuffSz, pcmFactory);
+                fixed(float * pa = a, pb = b, pf = b)
+                {
 
-                for(int i = start; i < start + size; ++i)
-                    data[i] = a[i] + (b[i] - a[i]) * f[i];
+                    this.gma.Accumulate(        pa, start, size, prefBuffSz, pcmFactory);
+                    this.gmb.Accumulate(        pb, start, size, prefBuffSz, pcmFactory);
+                    this.gmFactor.Accumulate(   pf, start, size, prefBuffSz, pcmFactory);
+
+                    for(int i = start; i < start + size; ++i)
+                        data[i] = pa[i] + (pb[i] - pa[i]) * pf[i];
+                }
             }
 
             public override PlayState Finished()
             {
-                PlayState psA = this.gma.Finished();
-                PlayState psB = this.gmb.Finished();
-
-                // If we're modulating and one is signaling it's just going to
-                // only return 0.0 from now one, we're done.
-                if (psA == PlayState.Finished || psB == PlayState.Finished)
-                    return PlayState.Finished;
-
-                if (psA == PlayState.NotStarted && psB == PlayState.NotStarted)
-                    return PlayState.NotStarted;
-
-                if (psA == PlayState.Constant || psB == PlayState.Constant)
-                    return PlayState.Constant;
-
-                return PlayState.Playing;
+                return ResolveTwoFinished(this.gma, this.gmb);
             }
 
             public override void ReportChildren(List<GenBase> lst)

@@ -43,7 +43,7 @@ namespace PxPre
                 this.curLen = this.maxLen;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.active == false)
                 { 
@@ -64,19 +64,23 @@ namespace PxPre
 
                 FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float[] a = fa.buffer;
-                this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
 
-                float c = this.curLen;
-                int sz = Mathf.Min(this.curLen, size);
-                this.curLen -= sz;
+                fixed(float * pa = a)
+                {
+                    this.input.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
 
-                float fmax = (float)this.maxLen;
-                for (int i = start; i < start + sz; ++i)
-                { 
-                    c -= 1.0f;
-                    float lam = c / fmax;
-                    lam = lam * lam;
-                    data[i] = lam * a[i];
+                    float c = this.curLen;
+                    int sz = Mathf.Min(this.curLen, size);
+                    this.curLen -= sz;
+
+                    float fmax = (float)this.maxLen;
+                    for (int i = start; i < start + sz; ++i)
+                    { 
+                        c -= 1.0f;
+                        float lam = c / fmax;
+                        lam = lam * lam;
+                        data[i] = lam * pa[i];
+                    }
                 }
             }
 

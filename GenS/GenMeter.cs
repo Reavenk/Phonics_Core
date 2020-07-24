@@ -45,7 +45,7 @@ namespace PxPre
                 this.clearOnProcessing = false;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 this.input.Accumulate(data, start, size, prefBuffSz, pcmFactory);
                 

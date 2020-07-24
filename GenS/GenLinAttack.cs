@@ -55,7 +55,7 @@ namespace PxPre
 
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.passed == true)
                 {
@@ -76,29 +76,33 @@ namespace PxPre
 
                 FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float [] a = fa.buffer;
-                this.gen.Accumulate(a, start, size, prefBuffSz, pcmFactory);
 
-                float at = this.itAttack;
-                float tot = (float)this.totalAttackSamples;
-                int sampCt = Min(size, totalAttackSamples - itAttack);
+                fixed(float * pa = a)
+                {
+                    this.gen.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
 
-                for(int i = start; i < start + sampCt; ++i)
-                { 
-                    float v = at / tot;
-                    at += 1.0f;
+                    float at = this.itAttack;
+                    float tot = (float)this.totalAttackSamples;
+                    int sampCt = Min(size, totalAttackSamples - itAttack);
 
-                    data[i] = a[i] * v;
+                    for(int i = start; i < start + sampCt; ++i)
+                    { 
+                        float v = at / tot;
+                        at += 1.0f;
+
+                        data[i] = pa[i] * v;
+                    }
+
+                    start += sampCt;
+                    size -= sampCt;
+                    this.itAttack += sampCt;
+
+                    if(this.itAttack >= this.totalAttackSamples)
+                        this.passed = true;
+
+                    for(int i = start; i < start + size; ++i)
+                        data[i] = pa[i];
                 }
-
-                start += sampCt;
-                size -= sampCt;
-                this.itAttack += sampCt;
-
-                if(this.itAttack >= this.totalAttackSamples)
-                    this.passed = true;
-
-                for(int i = start; i < start + size; ++i)
-                    data[i] = a[i];
             }
 
             public override PlayState Finished()

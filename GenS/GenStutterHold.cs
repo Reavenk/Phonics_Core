@@ -50,7 +50,7 @@ namespace PxPre
                     this.samplesLeft = holdSamples;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 while(size > 0)
                 {

@@ -46,7 +46,7 @@ namespace PxPre
                 this.constant = constant;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 for (int i = start; i < start + size; ++i)
                     data[i] = constant;

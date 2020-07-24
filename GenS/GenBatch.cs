@@ -46,7 +46,7 @@ namespace PxPre
                 this.batch = batch;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.batch.Length == 0)
                     return;
@@ -63,10 +63,13 @@ namespace PxPre
 
                     float [] rf = fpcm.buffer;
 
-                    gb.Accumulate(rf, start, size, prefBuffSz, pcmFactory);
+                    fixed(float * prf = rf)
+                    {
+                        gb.Accumulate(prf, start, size, prefBuffSz, pcmFactory);
 
-                    for(int i = start; i < start + size; ++i)
-                        data[i] += rf[i] * inv;
+                        for(int i = start; i < start + size; ++i)
+                            data[i] += prf[i] * inv;
+                    }
                 }
                 
             }

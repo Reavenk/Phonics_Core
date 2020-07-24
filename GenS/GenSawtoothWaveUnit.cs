@@ -18,57 +18,36 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace PxPre
 {
     namespace Phonics
     {
-        public class GenClampFull : GenBase
+        public class GenSawtoothWaveUnit : GenWave
         {
-            GenBase input;
-
-            public GenClampFull(GenBase input)
-                : base(0.0f, 0)
-            { 
-                this.input = input;
-            }
+            public GenSawtoothWaveUnit(float freq, double startTime, int samplesPerSec)
+                : base(freq, samplesPerSec, 1.0f)
+            { }
 
             unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
-                float [] a = fa.buffer;
-
-                fixed(float * pa = a)
+                double tIt = this.CurTime;
+                double incr = this.TimePerSample;
+                for (int i = start; i < start + size; ++i)
                 {
-                    this.input.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
-
-                    for(int i = start; i < start + size; ++i)
-                    { 
-                        if(pa[i] < -1.0f)
-                            data[i] = -1.0f;
-                        else if(pa[i] > 1.0f)
-                            data[i] = 1.0f;
-                        else
-                            data[i] = pa[i];
-                    }
+                    data[i] = -1.0f + (float)((tIt * this.Freq) % 1.0) * 2.0f;
+                    tIt += incr;
                 }
             }
 
             public override PlayState Finished()
             {
-                if(this.input == null)
-                    return PlayState.Finished;
-
-                return this.input.Finished();
+                return PlayState.Constant;
             }
 
             public override void ReportChildren(List<GenBase> lst)
-            {
-                lst.Add(this.input);
-            }
+            {}
         }
     }
 }

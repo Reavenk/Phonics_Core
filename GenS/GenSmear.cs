@@ -48,22 +48,25 @@ namespace PxPre
                 this.decayFactor = decayFactor;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                 float[] a = fa.buffer;
 
-                this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
-
-                for (int i = start; i < start + size; ++i)
+                fixed(float * pa = a)
                 {
-                    this.valAccum += this.integrateFactor * a[i];
-                    this.wtAccum += this.integrateFactor;
+                    this.input.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
 
-                    data[i] += this.valAccum/this.wtAccum;
+                    for (int i = start; i < start + size; ++i)
+                    {
+                        this.valAccum += this.integrateFactor * pa[i];
+                        this.wtAccum += this.integrateFactor;
 
-                    this.wtAccum *= this.decayFactor;
-                    this.valAccum *= this.decayFactor;
+                        data[i] += this.valAccum/this.wtAccum;
+
+                        this.wtAccum *= this.decayFactor;
+                        this.valAccum *= this.decayFactor;
+                    }
                 }
             }
 

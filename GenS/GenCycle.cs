@@ -90,7 +90,7 @@ namespace PxPre
                 this.rfs = new float[recordAmt];
             }
         
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
 
                 if(this.offset > 0)
@@ -101,7 +101,12 @@ namespace PxPre
                         // If silent, we still need to let time pass for it, so
                         // we need to burn it.
                         FPCM fpcm = pcmFactory.GetZeroedFPCM(start, size);
-                        this.input.Accumulate(fpcm.buffer, start, of, prefBuffSz, pcmFactory);
+                        float [] a = fpcm.buffer;
+
+                        fixed(float * pa = a)
+                        {
+                            this.input.Accumulate(pa, start, of, prefBuffSz, pcmFactory);
+                        }
                     }
                     else if(this.passOffset == OffsetPass.Pass)
                     { 
@@ -125,12 +130,15 @@ namespace PxPre
                     FPCM fpcm = pcmFactory.GetZeroedFPCM(0, size);
                     float [] lbuf = fpcm.buffer;
 
-                    this.input.Accumulate(lbuf, 0, recAmt, prefBuffSz, pcmFactory);
+                    fixed(float * plbuf = lbuf)
+                    {
+                        this.input.Accumulate(plbuf, 0, recAmt, prefBuffSz, pcmFactory);
 
-                    for(int i = 0; i < recAmt; ++i)
-                    { 
-                        data[start + i] = lbuf[i];
-                        rfs[recordingIt + i] = lbuf[i];
+                        for(int i = 0; i < recAmt; ++i)
+                        { 
+                            data[start + i] = plbuf[i];
+                            rfs[recordingIt + i] = plbuf[i];
+                        }
                     }
 
                     this.recordingIt += recAmt;

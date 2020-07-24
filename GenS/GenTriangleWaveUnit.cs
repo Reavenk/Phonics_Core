@@ -26,61 +26,35 @@ namespace PxPre
 {
     namespace Phonics
     {
-        /// <summary>
-        /// Return the maximum value per-sample between two PCM streams.
-        /// </summary>
-        public class GenMax : GenBase
+        public class GenTriangleWaveUnit : GenWave
         {
-            /// <summary>
-            /// One of the PCM streams.
-            /// </summary>
-            GenBase gma;
-
-            /// <summary>
-            /// The other PCM stream.
-            /// </summary>
-            GenBase gmb;
-
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="gma">One of the PCM streams.</param>
-            /// <param name="gmb">The other PCM stream.</param>
-            public GenMax(GenBase gma, GenBase gmb)
-                : base(0.0f, 0)
-            { 
-                this.gma = gma;
-                this.gmb = gmb;
-            }
+            public GenTriangleWaveUnit(float freq, int samplesPerSec)
+                : base(freq, samplesPerSec, 1.0f)
+            { }
 
             unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
-                FPCM fb = pcmFactory.GetZeroedFPCM(start, size);
-
-                float[] a = fa.buffer;
-                float[] b = fb.buffer;
-
-                fixed(float * pa = a, pb = b)
+                double tIt = this.CurTime;
+                double incr = this.TimePerSample;
+                for (int i = start; i < start + size; ++i)
                 {
-                    gma.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
-                    gmb.Accumulate(pb, start, size, prefBuffSz, pcmFactory);
+                    float fVal = (float)((tIt * this.Freq) % 1.0) * 2.0f;
 
-                    for (int i = start; i < start + size; ++i)
-                        data[i] = (pa[i] > pb[i]) ? pa[i] : pb[i];
+                    if(fVal > 1.0f)
+                        fVal = 1.0f - (fVal - 1.0f);
+
+                    data[i] = (fVal - 0.5f) * 2.0f;
+                    tIt += incr;
                 }
             }
 
             public override PlayState Finished()
-            {
-                return ResolveTwoFinished(this.gma, this.gmb);
+            { 
+                return PlayState.Constant;
             }
 
             public override void ReportChildren(List<GenBase> lst)
-            {
-                lst.Add(this.gma);
-                lst.Add(this.gmb);
-            }
+            {}
         }
     }
 }

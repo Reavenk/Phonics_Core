@@ -101,9 +101,9 @@ namespace PxPre
                 this.timePerSample = 1.0 / samplesPerSec;
             }
 
-            public abstract void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory);
+            unsafe public abstract void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory);
 
-            public void Accumulate(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public void Accumulate(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 this.AccumulateImpl(data, start, size, prefBuffSz, pcmFactory);
 
@@ -119,7 +119,13 @@ namespace PxPre
                 FPCMFactoryGenLimit fgl = 
                     new FPCMFactoryGenLimit(pcmFactory, size);
 
-                this.AccumulateImpl(data, 0, size, size, fgl);
+                unsafe 
+                {
+                    fixed (float* pd = data) 
+                    {
+                        this.AccumulateImpl(pd, 0, size, size, fgl);
+                    }
+                }
 
                 fgl.ReleaseScope();
 
@@ -127,7 +133,7 @@ namespace PxPre
                 this.it += data.Length;
             }
 
-            public void ReaderCallback(float[] data)
+            unsafe public void ReaderCallback(float[] data)
             {
                 IFPCMFactory pcmFactory = FPCMFactory.Instance;
                 FPCMFactoryGenLimit fgl = new FPCMFactoryGenLimit(pcmFactory, data.Length);

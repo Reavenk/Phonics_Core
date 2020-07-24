@@ -74,7 +74,7 @@ namespace PxPre
                 }
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             {
                 // Early release
                 if (this.released == true)
@@ -84,21 +84,24 @@ namespace PxPre
                         FPCM fpcmRl = pcmFactory.GetZeroedFPCM(start, size);
                         float[] fprl = fpcmRl.buffer;
 
-                        // We could probably optimize this by only calling AccumulateImpl_NonReleasePart()
-                        // when we're not in sustain yet.
-                        this.AccumulateImpl_NonReleasePart(fprl, start, size, prefBufSz, pcmFactory);
-
-                        float total = this.releaseTotal;
-                        float left = this.releaseLeft;
-                        int sampsCt = Mathf.Min(this.releaseLeft, size);
-
-                        for (int ei = start; ei < start + sampsCt; ++ei)
+                        fixed(float * pfprl = fprl)
                         {
-                            data[ei] = fprl[ei] * (left / total);
-                            left -= 1.0f;
+                            // We could probably optimize this by only calling AccumulateImpl_NonReleasePart()
+                            // when we're not in sustain yet.
+                            this.AccumulateImpl_NonReleasePart(pfprl, start, size, prefBufSz, pcmFactory);
+
+                            float total = this.releaseTotal;
+                            float left = this.releaseLeft;
+                            int sampsCt = Mathf.Min(this.releaseLeft, size);
+
+                            for (int ei = start; ei < start + sampsCt; ++ei)
+                            {
+                                data[ei] = pfprl[ei] * (left / total);
+                                left -= 1.0f;
+                            }
+                            this.releaseLeft -= sampsCt;
+                            return;
                         }
-                        this.releaseLeft -= sampsCt;
-                        return;
                     }
                     else if (this.saftey > 0)
                         this.saftey -= size;
@@ -109,7 +112,7 @@ namespace PxPre
                 }
             }
 
-            public void AccumulateImpl_NonReleasePart(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public void AccumulateImpl_NonReleasePart(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             { 
                 if(this.offset > 0)
                 { 

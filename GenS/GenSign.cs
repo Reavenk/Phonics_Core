@@ -36,23 +36,26 @@ namespace PxPre
                 this.input = input;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             {
                 FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
 
                 float [] a = fa.buffer;
 
-                this.input.Accumulate(a, start, size, prefBufSz, pcmFactory);
+                fixed(float * pa = a)
+                {
+                    this.input.Accumulate(pa, start, size, prefBufSz, pcmFactory);
 
-                for(int i = start; i < start + size; ++i)
-                { 
-                    float s = a[i];
-                    if(s == 0.0)
-                        data[i] = 0.0f;
-                    else if(s > 0.0)
-                        data[i] = 1.0f;
-                    else
-                        data[i] = -1.0f;
+                    for(int i = start; i < start + size; ++i)
+                    { 
+                        float s = pa[i];
+                        if(s == 0.0)
+                            data[i] = 0.0f;
+                        else if(s > 0.0)
+                            data[i] = 1.0f;
+                        else
+                            data[i] = -1.0f;
+                    }
                 }
             }
 

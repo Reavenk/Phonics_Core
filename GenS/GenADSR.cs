@@ -114,7 +114,7 @@ namespace PxPre
                 }
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             {
                 // Early release
                 if (this.released == true)
@@ -124,18 +124,22 @@ namespace PxPre
                         FPCM fpcmRl = pcmFactory.GetZeroedFPCM(start, size);
                         float[] fprl = fpcmRl.buffer;
 
-                        // We could probably optimize this by only calling AccumulateImpl_NonReleasePart()
-                        // when we're not in sustain yet.
-                        this.AccumulateImpl_NonReleasePart(fprl, start, size, prefBufSz, pcmFactory);
-
-                        float total = this.releaseTotal;
-                        float left = this.releaseLeft;
                         int sampsCt = Mathf.Min(this.releaseLeft, size);
 
-                        for (int ei = start; ei < start + sampsCt; ++ei)
+                        // We could probably optimize this by only calling AccumulateImpl_NonReleasePart()
+                        // when we're not in sustain yet.
+                        fixed(float * pfprl = fprl)
                         {
-                            data[ei] = fprl[ei] * (left / total);
-                            left -= 1.0f;
+                            this.AccumulateImpl_NonReleasePart(pfprl, start, size, prefBufSz, pcmFactory);
+                        
+                            float total = this.releaseTotal;
+                            float left = this.releaseLeft;
+
+                            for (int ei = start; ei < start + sampsCt; ++ei)
+                            {
+                                data[ei] = pfprl[ei] * (left / total);
+                                left -= 1.0f;
+                            }
                         }
                         this.releaseLeft -= sampsCt;
                         return;
@@ -149,69 +153,74 @@ namespace PxPre
                 }
             }
 
-            public void AccumulateImpl_NonReleasePart(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public void AccumulateImpl_NonReleasePart(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             { 
                 FPCM fpcm = pcmFactory.GetZeroedFPCM(start, size);
                 float[] fp = fpcm.buffer;
-                this.input.Accumulate(fp, start, size, prefBufSz, pcmFactory);
 
-                if(this.offset > 0)
-                { 
-                    int ofrm = Mathf.Min(this.offset, size);
-                    this.offset -= ofrm;
-                    start += ofrm;
-                    size -= ofrm;
-                    
-                    if(size <= 0)
-                        return;
-                }
+                fixed(float * pfp = fp)
+                {
+                    this.input.Accumulate(pfp, start, size, prefBufSz, pcmFactory);
+                
 
-                // ATTACK
-                if (this.attackIt < this.attackTotal)
-                { 
-                    int atrm = Mathf.Min(this.attackTotal - this.attackIt, size);
-                    int end = start + atrm;
-                    float totalAt = this.attackTotal;
-                    float at = this.attackIt;
-                    for(int i = start; i < end; ++i)
-                    {
-                        data[i] = fp[i] * (at/totalAt);
-                        at += 1.0f;
-                    }
-
-                    this.attackIt += atrm;
-
-                    size -= atrm;
-                    start += atrm;
-                    if(size <= 0)
-                        return;
-                }
-
-                // DECAY
-                if(this.decayLeft > 0)
-                { 
-                    int dcrm = Mathf.Min(this.decayLeft, size);
-                    int dcend = start + dcrm;
-                    float totalDc = this.decayTotal;
-                    float cd = this.decayLeft;
-                    float susDiff = 1.0f - this.sustain;
-                    for(int i = start; i < dcend; ++i)
+                    if(this.offset > 0)
                     { 
-                        data[i] = fp[i] * (this.sustain + (cd / totalDc) * susDiff);
-                        cd -= 1.0f;
+                        int ofrm = Mathf.Min(this.offset, size);
+                        this.offset -= ofrm;
+                        start += ofrm;
+                        size -= ofrm;
+                    
+                        if(size <= 0)
+                            return;
                     }
 
-                    this.decayLeft -= dcrm;
+                    // ATTACK
+                    if (this.attackIt < this.attackTotal)
+                    { 
+                        int atrm = Mathf.Min(this.attackTotal - this.attackIt, size);
+                        int end = start + atrm;
+                        float totalAt = this.attackTotal;
+                        float at = this.attackIt;
+                        for(int i = start; i < end; ++i)
+                        {
+                            data[i] = pfp[i] * (at/totalAt);
+                            at += 1.0f;
+                        }
 
-                    size -= dcrm;
-                    start += dcrm;
-                    if(size <= 0)
-                        return;
+                        this.attackIt += atrm;
+
+                        size -= atrm;
+                        start += atrm;
+                        if(size <= 0)
+                            return;
+                    }
+
+                    // DECAY
+                    if(this.decayLeft > 0)
+                    { 
+                        int dcrm = Mathf.Min(this.decayLeft, size);
+                        int dcend = start + dcrm;
+                        float totalDc = this.decayTotal;
+                        float cd = this.decayLeft;
+                        float susDiff = 1.0f - this.sustain;
+                        for(int i = start; i < dcend; ++i)
+                        { 
+                            data[i] = pfp[i] * (this.sustain + (cd / totalDc) * susDiff);
+                            cd -= 1.0f;
+                        }
+
+                        this.decayLeft -= dcrm;
+
+                        size -= dcrm;
+                        start += dcrm;
+                        if(size <= 0)
+                            return;
+                    }
+
+                    // If we're still here, all that's left is sustain
+                    for( int i = start; i < start + size; ++i)
+                        data[i] = pfp[i] * this.sustain;
                 }
-
-                // If we're still here, all that's left is sustain
-                for( int i = start; i < start + size; ++i)
-                    data[i] = fp[i] * this.sustain;
             }
 
             public override PlayState Finished()

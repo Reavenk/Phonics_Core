@@ -21,66 +21,49 @@
 // SOFTWARE.
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PxPre
 {
     namespace Phonics
     {
-        /// <summary>
-        /// Return the maximum value per-sample between two PCM streams.
-        /// </summary>
-        public class GenMax : GenBase
+        public class GenWhiteUnit : GenBase
         {
-            /// <summary>
-            /// One of the PCM streams.
-            /// </summary>
-            GenBase gma;
+            int noiseIt = 0;
 
-            /// <summary>
-            /// The other PCM stream.
-            /// </summary>
-            GenBase gmb;
-
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="gma">One of the PCM streams.</param>
-            /// <param name="gmb">The other PCM stream.</param>
-            public GenMax(GenBase gma, GenBase gmb)
-                : base(0.0f, 0)
-            { 
-                this.gma = gma;
-                this.gmb = gmb;
-            }
+            // We throw away the frequency parameter, it does nothing for us.
+            public GenWhiteUnit()
+                : base(0.0, 0)
+            { }
 
             unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
-                FPCM fb = pcmFactory.GetZeroedFPCM(start, size);
 
-                float[] a = fa.buffer;
-                float[] b = fb.buffer;
+                int i = start;
+                while(size > 0)
+                { 
+                    if(noiseIt >= GenWhite.NoiseBufferSz)
+                        this.noiseIt = 0;
 
-                fixed(float * pa = a, pb = b)
-                {
-                    gma.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
-                    gmb.Accumulate(pb, start, size, prefBuffSz, pcmFactory);
-
-                    for (int i = start; i < start + size; ++i)
-                        data[i] = (pa[i] > pb[i]) ? pa[i] : pb[i];
+                    int sz = Mathf.Min(GenWhite.NoiseBufferSz - this.noiseIt, size); 
+                    int end = i + sz;
+                
+                    for (; i < end; ++i)
+                        data[i] = GenWhite.bakedNoise[i];
+                    
+                    noiseIt += sz;
+                    size -= sz;
                 }
+                
             }
 
             public override PlayState Finished()
             {
-                return ResolveTwoFinished(this.gma, this.gmb);
+                return PlayState.Constant;
             }
 
             public override void ReportChildren(List<GenBase> lst)
-            {
-                lst.Add(this.gma);
-                lst.Add(this.gmb);
-            }
+            {}
         }
     }
 }

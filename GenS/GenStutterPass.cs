@@ -51,7 +51,7 @@ namespace PxPre
                     this.samplesLeft = holdSamples;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 while(size > 0)
                 {
@@ -79,7 +79,11 @@ namespace PxPre
                         // with them, but we need to get time to pass for the rest of the hierarchy.
                         FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
                         float[] a = fa.buffer;
-                        this.input.Accumulate(a, start, size, prefBuffSz, pcmFactory);
+
+                        fixed(float * pa = a)
+                        {
+                            this.input.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
+                        }
 
                         this.samplesLeft -= burn;
                         size -=burn;

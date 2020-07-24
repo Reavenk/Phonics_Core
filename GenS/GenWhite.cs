@@ -32,10 +32,10 @@ namespace PxPre
         /// </summary>
         public class GenWhite : GenBase
         {
-            const int NoiseBufferSz = 44100;
+            public const int NoiseBufferSz = 44100;
+            public static float [] bakedNoise = null;
 
             int noiseIt = 0;
-            static float [] bakedNoise = null;
 
             float amplitude = 1.0f;
 
@@ -56,7 +56,7 @@ namespace PxPre
                 this.amplitude = amplitude;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
 
                 int i = start;

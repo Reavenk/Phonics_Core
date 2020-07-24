@@ -111,7 +111,7 @@ namespace PxPre
                 }
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBufSz, FPCMFactoryGenLimit pcmFactory)
             {
                 //  BYPASS IF NO POINT NOT TO
                 ////////////////////////////////////////////////////////////////////////////////
@@ -120,6 +120,7 @@ namespace PxPre
                     // This will probably rarely ever happen because it defeats the purpose of using
                     // this node, but I'll take the optimization where I can get it.
                     this.input.Accumulate(data, start, size, prefBufSz, pcmFactory);
+                    return;
                 }
 
                 //  READ IN NEW INFORMATION BY APPENDING BUFFERS
@@ -144,12 +145,16 @@ namespace PxPre
                     { 
                         int readHead = last.cachedLen - last.readLeft;
                         // Read the new stuff requested
-                        this.input.Accumulate(
-                            last.buffer.buffer, 
-                            readHead, 
-                            readBufAmt, 
-                            prefBufSz, 
-                            pcmFactory);
+                        float [] wbuf = last.buffer.buffer;
+                        fixed(float * pwbuf = wbuf)
+                        {
+                            this.input.Accumulate(
+                                &pwbuf[readHead], 
+                                0, 
+                                readBufAmt, 
+                                prefBufSz, 
+                                pcmFactory);
+                        }
 
                         // Update and save it back
                         last.readLeft -= readBufAmt;

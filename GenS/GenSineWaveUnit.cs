@@ -21,66 +21,40 @@
 // SOFTWARE.
 
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace PxPre
 {
     namespace Phonics
     {
-        /// <summary>
-        /// Return the maximum value per-sample between two PCM streams.
-        /// </summary>
-        public class GenMax : GenBase
+        public class GenSineWaveUnit : GenWave
         {
-            /// <summary>
-            /// One of the PCM streams.
-            /// </summary>
-            GenBase gma;
+            private double timeToFreq;
 
-            /// <summary>
-            /// The other PCM stream.
-            /// </summary>
-            GenBase gmb;
-
-            /// <summary>
-            /// Constructor.
-            /// </summary>
-            /// <param name="gma">One of the PCM streams.</param>
-            /// <param name="gmb">The other PCM stream.</param>
-            public GenMax(GenBase gma, GenBase gmb)
-                : base(0.0f, 0)
-            { 
-                this.gma = gma;
-                this.gmb = gmb;
+            public GenSineWaveUnit(float freq, int samplesPerSec)
+                : base(freq, samplesPerSec, 1.0f)
+            {
+                this.timeToFreq = dTau * freq;
             }
 
             unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
-                FPCM fa = pcmFactory.GetZeroedFPCM(start, size);
-                FPCM fb = pcmFactory.GetZeroedFPCM(start, size);
-
-                float[] a = fa.buffer;
-                float[] b = fb.buffer;
-
-                fixed(float * pa = a, pb = b)
+                double tIt = this.CurTime;
+                double incr = this.TimePerSample;
+                for (int i = start; i < start + size; ++i)
                 {
-                    gma.Accumulate(pa, start, size, prefBuffSz, pcmFactory);
-                    gmb.Accumulate(pb, start, size, prefBuffSz, pcmFactory);
-
-                    for (int i = start; i < start + size; ++i)
-                        data[i] = (pa[i] > pb[i]) ? pa[i] : pb[i];
+                    data[i] = Mathf.Sin((float)(tIt * this.timeToFreq));
+                    tIt += incr;
                 }
             }
 
             public override PlayState Finished()
             {
-                return ResolveTwoFinished(this.gma, this.gmb);
+                return PlayState.Constant;
             }
 
             public override void ReportChildren(List<GenBase> lst)
-            {
-                lst.Add(this.gma);
-                lst.Add(this.gmb);
-            }
+            {}
         }
     }
 }

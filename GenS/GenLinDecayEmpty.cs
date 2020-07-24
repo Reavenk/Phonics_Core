@@ -55,7 +55,7 @@ namespace PxPre
                 this.invSustain = 1.0f - sustain;
             }
 
-            public override void AccumulateImpl(float [] data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
+            unsafe public override void AccumulateImpl(float * data, int start, int size, int prefBuffSz, FPCMFactoryGenLimit pcmFactory)
             {
                 if(this.durationSamples <= 0)
                 {
