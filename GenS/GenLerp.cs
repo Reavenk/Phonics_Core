@@ -50,7 +50,7 @@ namespace PxPre
                 float [] b = fb.buffer;
                 float [] f = ff.buffer;
 
-                fixed(float * pa = a, pb = b, pf = b)
+                fixed(float * pa = a, pb = b, pf = f)
                 {
 
                     this.gma.Accumulate(        pa, start, size, prefBuffSz, pcmFactory);
