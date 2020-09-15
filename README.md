@@ -15,6 +15,14 @@ Documentation may come latter.
 
 
 
+# Instructions
+
+* The source code relies on unsafe code. Make sure to turn on the "Allow 'unsafe' Code" player option.
+* It is advised to use the IL2CPP scripting backend. The Mono backend is far slower.
+* The source code is designed for Unity, but can easily be converted to non-Unity C#.
+
+
+
 # Contributors
 
 William Leu (Pixel Precision LLC)
